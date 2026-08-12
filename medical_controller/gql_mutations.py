@@ -48,7 +48,7 @@ def generate_mission_code(region):
 
     return f"{prefix}{seq:05d}"
 
-class CreateMissionMutation(BaseHistoryModelDeleteMutationMixin, BaseUpdateMutationMixin):
+class CreateMissionMutation(OpenIMISMutation):
 
     _mutation_module = "medical_control"
 
@@ -125,3 +125,24 @@ class CreateMissionMutation(BaseHistoryModelDeleteMutationMixin, BaseUpdateMutat
         return {
             "mission_code": mission.mission_code
         }
+
+
+class UpdateMissionMutation(OpenIMISMutation, BaseUpdateMutationMixin):
+
+    _mutation_module = "medical_control"
+
+    _mutation_class = "UpdateMissionMutation"
+    _model = MedicalControlMission
+
+    @classmethod
+    def _validate_mutation(cls, user, **data):
+        if type(user) is AnonymousUser or not user.id:
+            raise ValidationError("mutation.authentication_required")
+        if not user.has_perms(
+                MedicalControllerConfig.gql_mutation_medical_controller_perms):
+            raise PermissionDenied(_("unauthorized"))
+
+
+class Mutation(graphene.ObjectType):
+    create_mission = CreateMissionMutation.Field()
+    update_mission = UpdateMissionMutation.Field()

@@ -14,7 +14,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('location', '0026_remove_healthfacility_row_id_and_more'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
