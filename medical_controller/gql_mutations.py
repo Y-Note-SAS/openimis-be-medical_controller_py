@@ -37,7 +37,7 @@ def generate_mission_code(region):
     last = (
         MedicalControlMission.objects
         .filter(region=region)
-        .order_by("-id")
+        .order_by("-mission_code")
         .first()
     )
 
@@ -124,10 +124,6 @@ class CreateMissionMutation(OpenIMISMutation):
             for hf_id in hf_ids
         ])
 
-        return {
-            "mission_code": mission.mission_code
-        }
-
 
 class UpdateMissionMutation(OpenIMISMutation, BaseUpdateMutationMixin):
 
@@ -143,4 +139,3 @@ class UpdateMissionMutation(OpenIMISMutation, BaseUpdateMutationMixin):
         if not user.has_perms(
                 MedicalControllerConfig.gql_mutation_medical_controller_perms):
             raise PermissionDenied(_("unauthorized"))
-

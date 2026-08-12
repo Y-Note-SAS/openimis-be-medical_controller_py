@@ -68,14 +68,9 @@ def resolve_mission(self, info, **kwargs):
     ):
         raise PermissionDenied(_("unauthorized"))
 
-    if kwargs.get("id"):
+    if kwargs.get("mission_code"):
         return MedicalControlMission.objects.get(
-            id=kwargs["id"]
-        )
-
-    if kwargs.get("uuid"):
-        return MedicalControlMission.objects.get(
-            uuid=kwargs["uuid"]
+            code=kwargs["mission_code"]
         )
 
     return None
