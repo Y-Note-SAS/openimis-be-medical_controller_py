@@ -10,6 +10,7 @@ from django.utils.translation import gettext as _
 from core import prefix_filterset, ExtendedConnection
 from location.schema import HealthFacilityGQLType, LocationGQLType
 from core.schema import UserGQLType
+from.gql_mutations import CreateMissionMutation, UpdateMissionMutation
 
 class MissionGQLType(DjangoObjectType):
 
@@ -114,3 +115,7 @@ def resolve_missions(self, info, **kwargs):
         query = query.filter(*filters)
 
     return gql_optimizer.query(query, info)
+
+class Mutation(graphene.ObjectType):
+    create_mission = CreateMissionMutation.Field()
+    update_mission = UpdateMissionMutation.Field()

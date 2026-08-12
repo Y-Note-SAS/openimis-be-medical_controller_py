@@ -5,13 +5,13 @@ from django.core.exceptions import ValidationError
 from location.models import Location
 from .models import MedicalControlMission, MissionHealthFacility
 from core.gql.gql_mutations.base_mutation import (
-    BaseHistoryModelDeleteMutationMixin,
     BaseUpdateMutationMixin
 )
 from django.utils.translation import gettext as _
 from .apps import MedicalControllerConfig
 from django.core.exceptions import PermissionDenied
 from core import TimeUtils
+import uuid
 
 class CreateMissionInputType(OpenIMISMutation.Input):
 
@@ -50,7 +50,7 @@ def generate_mission_code(region):
 
 class CreateMissionMutation(OpenIMISMutation):
 
-    _mutation_module = "medical_control"
+    _mutation_module = "medical_controller"
 
     _mutation_class = "CreateMissionMutation"
     _model = MedicalControlMission
@@ -102,22 +102,24 @@ class CreateMissionMutation(OpenIMISMutation):
                 _("End date must be greater than start date")
             )
 
-        mission = MedicalControlMission.objects.create(
+        mission = MedicalControlMission(
             mission_code=generate_mission_code(region),
             region=region,
             district=district,
             start_date=data["start_date"],
             end_date=data["end_date"],
             status=MedicalControlMission.STATUS_IN_PROGRESS,
-            user=user._u,
-            audit_user_id=user.id_for_audit
+            user=user
         )
+        mission.save(username=user.username)
 
         MissionHealthFacility.objects.bulk_create([
             MissionHealthFacility(
+                id=uuid.uuid4(),
                 mission=mission,
-                health_facility_id=hf_id,
-                audit_user_id=user.id_for_audit
+                user_created=user,
+                user_updated=user,
+                health_facility_id=hf_id
             )
             for hf_id in hf_ids
         ])
@@ -129,7 +131,7 @@ class CreateMissionMutation(OpenIMISMutation):
 
 class UpdateMissionMutation(OpenIMISMutation, BaseUpdateMutationMixin):
 
-    _mutation_module = "medical_control"
+    _mutation_module = "medical_controller"
 
     _mutation_class = "UpdateMissionMutation"
     _model = MedicalControlMission
@@ -142,7 +144,3 @@ class UpdateMissionMutation(OpenIMISMutation, BaseUpdateMutationMixin):
                 MedicalControllerConfig.gql_mutation_medical_controller_perms):
             raise PermissionDenied(_("unauthorized"))
 
-
-class Mutation(graphene.ObjectType):
-    create_mission = CreateMissionMutation.Field()
-    update_mission = UpdateMissionMutation.Field()
