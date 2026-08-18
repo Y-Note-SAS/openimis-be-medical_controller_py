@@ -26,6 +26,6 @@ jobs:
       SONAR_ORGANIZATION: openimis-1
       SONAR_PROJECT_NAME: openimis-be-medical_controller_py
       SONAR_PROJECT_VERSION: 1.0
-      SONAR_SOURCES: claim
+      SONAR_SOURCES: medical_controller
       SONAR_EXCLUSIONS: "**/migrations/**,**/static/**,**/media/**,**/tests/**"
 
