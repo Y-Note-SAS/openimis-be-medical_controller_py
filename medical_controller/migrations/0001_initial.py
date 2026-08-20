@@ -116,8 +116,7 @@ class Migration(migrations.Migration):
                 ('user_updated', models.ForeignKey(db_column='UserUpdatedUUID', on_delete=django.db.models.deletion.DO_NOTHING, related_name='%(class)s_user_updated', to=settings.AUTH_USER_MODEL)),
             ],
             options={
-                'db_table': 'tblMedicalControlMissionHF',
-                'unique_together': {('mission', 'health_facility')},
+                'db_table': 'tblMedicalControlMissionHF'
             },
             bases=(dirtyfields.dirtyfields.DirtyFieldsMixin, core.utils.CachedModelMixin, models.Model),
         ),

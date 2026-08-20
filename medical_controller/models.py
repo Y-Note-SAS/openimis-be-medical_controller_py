@@ -4,6 +4,8 @@ from core import models as core_models
 from location.models import Location
 from location.models import HealthFacility
 from core.models import User
+from claim.models import Claim
+
 
 class MedicalControlMission(core_models.HistoryModel):
 
@@ -52,8 +54,79 @@ class MedicalControlMission(core_models.HistoryModel):
         blank=True
     )
 
+    percentage_one = models.CharField(
+        max_length=3,
+        blank=True,
+        null=True,
+        db_column='PercentageOne'
+    )
+
+    percentage_two = models.CharField(
+        max_length=3,
+        blank=True,
+        null=True,
+        db_column='PercentageTwo'
+    )
+
+    percentage_three = models.CharField(
+        max_length=3,
+        blank=True,
+        null=True,
+        db_column='PercentageThree'
+    )
+
+    percentage_four = models.CharField(
+        max_length=3,
+        blank=True,
+        null=True,
+        db_column='PercentageFour'
+    )
+
     class Meta:
         db_table = "tblMedicalControlMission"
+
+
+class FilteredClaimsForMission(core_models.HistoryModel):
+
+    mission = models.ForeignKey(
+        MedicalControlMission,
+        on_delete=models.DO_NOTHING,
+        related_name="mission_health_facilities"
+    )
+
+    claim = models.ForeignKey(
+        Claim,
+        on_delete=models.DO_NOTHING
+    )
+
+    from_rejected_to_valuated = models.BooleanField(
+        db_column='RejectedToValuated',
+        blank=True,
+        null=True
+    )
+
+    audit_explanation = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        db_column='AuditExplanation'
+    )
+
+    audited = models.BooleanField(
+        db_column='Audited',
+        blank=True,
+        null=True
+    )
+
+    claim_category = models.CharField(
+        max_length=1,
+        blank=True,
+        null=True,
+        db_column='ClaimCategory'
+    )
+
+    class Meta:
+        db_table = "tblFilteredClaimsForMission"
 
 
 class MissionHealthFacility(core_models.HistoryModel):
@@ -71,8 +144,3 @@ class MissionHealthFacility(core_models.HistoryModel):
 
     class Meta:
         db_table = "tblMedicalControlMissionHF"
-
-        unique_together = (
-            "mission",
-            "health_facility"
-        )
