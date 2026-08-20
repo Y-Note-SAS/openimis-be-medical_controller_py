@@ -11,6 +11,7 @@ from .gql_queries import MissionGQLType
 from .models import MedicalControlMission, FilteredClaimsForMission
 from claim.models import Claim
 from .services import process_category
+from django.core.exceptions import ValidationError
 
 
 class ClaimSampleCategoryGQLType(graphene.ObjectType):
@@ -103,10 +104,14 @@ class Query(graphene.ObjectType):
 
         mission = (
             MedicalControlMission.objects
-            .get(
+            .filter(
                 mission_code=mission_code
-            )
+            ).first()
         )
+        if not mission:
+            raise ValidationError(
+                _("mutation.mission.not.exist")
+            )
 
         health_facilities = kwargs.get(
             "health_facility_ids",

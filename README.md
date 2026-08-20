@@ -33,8 +33,6 @@ Creates a new medical control mission with associated health facilities.
 - Health facilities are bulk-created under the mission.
 
 ### UpdateMissionMutation
-Updates an existing medical control mission (inherits `BaseUpdateMutationMixin`).
-
 Same validation and permission rules apply.
 
 ## Permissions
