@@ -18,28 +18,36 @@ CATEGORY_3_CODES = [
 
 
 def _sample_claims(queryset, percentage):
-    claims = list(queryset.distinct())
+    claim_ids = list(
+        queryset.values_list(
+            "id",
+            flat=True,
+        ).distinct()
+    )
 
-    if not claims:
+    if not claim_ids:
         return []
 
     sample_size = math.ceil(
-        len(claims) * (
-            Decimal(str(percentage)) / Decimal("100")
-        )
+        len(claim_ids)
+        * (Decimal(str(percentage)) / Decimal("100"))
     )
 
     sample_size = min(
         sample_size,
-        len(claims),
+        len(claim_ids),
     )
 
     if sample_size == 0:
         return []
 
-    return random.sample(
-        claims,
+    selected_ids = random.sample(
+        claim_ids,
         sample_size,
+    )
+
+    return Claim.objects.filter(
+        id__in=selected_ids
     )
 
 
