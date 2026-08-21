@@ -1,9 +1,10 @@
 import graphene
 from core import prefix_filterset, ExtendedConnection
 from location.schema import HealthFacilityGQLType, LocationGQLType
+from claim.gql_queries import ClaimGQLType
 from graphene_django import DjangoObjectType
 from core.schema import UserGQLType
-from .models import MedicalControlMission, MissionHealthFacility
+from .models import MedicalControlMission, MissionHealthFacility, FilteredClaimsForMission
 
 
 class MissionGQLType(DjangoObjectType):
@@ -38,5 +39,19 @@ class MissionHFGQLType(DjangoObjectType):
             "id": ["exact"],
             **prefix_filterset("mission__", MissionGQLType._meta.filter_fields),
             **prefix_filterset("health_facility__", HealthFacilityGQLType._meta.filter_fields),
+        }
+        connection_class = ExtendedConnection
+
+
+class FilteredClaimsForMissionGQLType(DjangoObjectType):
+
+    client_mutation_id = graphene.String()
+
+
+    class Meta:
+        model = FilteredClaimsForMission
+        interfaces = (graphene.relay.Node,)
+        filter_fields = {
+            **prefix_filterset("claim__", ClaimGQLType._meta.filter_fields),
         }
         connection_class = ExtendedConnection

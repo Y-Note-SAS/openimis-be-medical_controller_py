@@ -7,11 +7,12 @@ from core.schema import UserGQLType
 from claim.gql_queries import ClaimGQLType
 from core.models import User
 from.gql_mutations import CreateMissionMutation, UpdateMissionMutation
-from .gql_queries import MissionGQLType
+from .gql_queries import MissionGQLType, FilteredClaimsForMissionGQLType
 from .models import MedicalControlMission, FilteredClaimsForMission
 from claim.models import Claim
 from .services import process_category
 from django.core.exceptions import ValidationError
+import graphene_django_optimizer as gql_optimizer
 
 
 class ClaimSampleCategoryGQLType(graphene.ObjectType):
@@ -50,6 +51,16 @@ class Query(graphene.ObjectType):
         UserGQLType
     )
 
+    claims_for_health_facilities = OrderedDjangoFilterConnectionField(
+        FilteredClaimsForMissionGQLType,
+        health_facility_ids=graphene.List(
+            graphene.Int,
+            required=True
+        ),
+        mission_code=graphene.String(required=True),
+        category=graphene.String(required=False)
+    )
+
     get_claims_sample = graphene.Field(
         ClaimSampleResultGQLType,
         percentage_categ_one=graphene.String(
@@ -73,6 +84,41 @@ class Query(graphene.ObjectType):
         )
     )
 
+    def resolve_claims_for_health_facilities(self, info, search=None, **kwargs):
+        if not info.context.user.has_perms(
+            MedicalControllerConfig.gql_mutation_medical_controller_perms):
+            raise PermissionDenied(_("unauthorized"))
+
+        health_facilities = kwargs.get(
+            "health_facility_ids",
+            [],
+        )
+
+        mission_code = kwargs.get(
+            "mission_code"
+        )
+
+        mission = (
+            MedicalControlMission.objects
+            .filter(
+                mission_code=mission_code
+            ).first()
+        )
+        if not mission:
+            raise ValidationError(
+                _("mutation.mission.not.exist")
+            )
+
+        query = FilteredClaimsForMission.objects.filter(
+            claim__health_facility__id__in=health_facilities,
+            mission=mission
+        ).distinct()
+        category = kwargs.get("category", None)
+
+        if category:
+            query = query.filter(claim_category=category)
+
+        return gql_optimizer.query(query, info)
 
     def resolve_medical_controllers(self, info, search=None, **kwargs):
         if not info.context.user.has_perms(
@@ -206,20 +252,23 @@ def build_category_result(
     mission,
     category,
 ):
-    selected_claims = Claim.objects.filter(
-        id__in=(
-            FilteredClaimsForMission.objects
-            .filter(
-                mission=mission,
-                claim_category=category,
-            )
-            .values_list(
-                "claim_id",
-                flat=True,
-            )
+    print("*******")
+    claim_ids = (
+        FilteredClaimsForMission.objects
+        .filter(
+            mission=mission,
+            claim_category=category,
         )
-    ).distinct()
+        .values_list(
+            "claim_id",
+            flat=True,
+        )
+        .distinct()
+    )
 
+    selected_claims = Claim.objects.filter(
+        id__in=claim_ids
+    )
     return selected_claims.count()
 
 
