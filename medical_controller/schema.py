@@ -252,7 +252,6 @@ def build_category_result(
     mission,
     category,
 ):
-    print("*******")
     claim_ids = (
         FilteredClaimsForMission.objects
         .filter(
