@@ -4,9 +4,6 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError
 from location.models import Location
 from .models import MedicalControlMission, MissionHealthFacility
-from core.gql.gql_mutations.base_mutation import (
-    BaseUpdateMutationMixin
-)
 from django.utils.translation import gettext as _
 from .apps import MedicalControllerConfig
 from django.core.exceptions import PermissionDenied
@@ -28,8 +25,13 @@ class CreateMissionInputType(OpenIMISMutation.Input):
 
     end_date = graphene.Date(required=True)
 
-    status = graphene.Int(required=False)
+    status = graphene.String(required=False)
 
+
+class UpdateMissionInputType(OpenIMISMutation.Input):
+
+    status = graphene.String(required=True)
+    mission_code = graphene.String(required=True)
 
 def generate_mission_code(region):
     prefix = str(region.code)
@@ -47,6 +49,7 @@ def generate_mission_code(region):
         seq = int(last.mission_code[len(prefix):]) + 1
 
     return f"{prefix}{seq:05d}"
+
 
 class CreateMissionMutation(OpenIMISMutation):
 
@@ -125,7 +128,7 @@ class CreateMissionMutation(OpenIMISMutation):
         ])
 
 
-class UpdateMissionMutation(OpenIMISMutation, BaseUpdateMutationMixin):
+class UpdateMissionMutation(OpenIMISMutation):
 
     _mutation_module = "medical_controller"
 
@@ -139,3 +142,42 @@ class UpdateMissionMutation(OpenIMISMutation, BaseUpdateMutationMixin):
         if not user.has_perms(
                 MedicalControllerConfig.gql_mutation_medical_controller_perms):
             raise PermissionDenied(_("unauthorized"))
+
+    class Input(UpdateMissionInputType):
+        pass
+
+    @classmethod
+    def async_mutate(cls, user, **data):
+
+        if type(user) is AnonymousUser or not user.id:
+            raise ValidationError(
+                _("mutation.authentication_required")
+            )
+
+        mission_code = data.get("mission_code", None)
+        mission_status = data.get("status", None)
+        if not mission_code:
+            raise ValidationError(
+                _("mutation.no_mission_code_sent_for_update")
+            )
+
+        if not mission_status:
+            raise ValidationError(
+                _("mutation.no_mission_status")
+            )
+
+        if "client_mutation_id" in data:
+            data.pop("client_mutation_id")
+        if "client_mutation_label" in data:
+            data.pop("client_mutation_label")
+
+        mission = (
+            MedicalControlMission.objects
+            .get(
+                mission_code=mission_code
+            )
+        )
+        mission.status = mission_status
+        mission.user_updated = user
+        mission.date_updated = TimeUtils.now()
+        mission.save(username=user.username)
