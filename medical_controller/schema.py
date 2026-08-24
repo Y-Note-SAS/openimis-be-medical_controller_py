@@ -190,7 +190,7 @@ class Query(graphene.ObjectType):
         if not mission:
             raise ValidationError(_("mutation.mission.not.exist"))
 
-        query = FilteredClaimsForMission.objects.filter(mission=mission)
+        query = MissionActivityHistory.objects.filter(mission=mission)
 
         return gql_optimizer.query(query, info)
 
