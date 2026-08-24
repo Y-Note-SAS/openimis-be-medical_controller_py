@@ -27,7 +27,7 @@ class ClaimsForHealthFacilitiesResultGQLType(graphene.ObjectType):
     percentage_categ3 = graphene.String()
     percentage_categ4 = graphene.String()
 
-    claims = graphene.List(
+    claims = OrderedDjangoFilterConnectionField(
         FilteredClaimsForMissionGQLType
     )
 
@@ -132,10 +132,10 @@ class Query(graphene.ObjectType):
         if category:
             base_query = base_query.filter(claim_category=category)
 
-        # ids = base_query.values_list("id", flat=True).distinct()
+        ids = base_query.values_list("id", flat=True).distinct()
 
-        # query = FilteredClaimsForMission.objects.filter(id__in=ids)
-        claims = list(base_query)
+        query = FilteredClaimsForMission.objects.filter(id__in=ids)
+        claims = query
 
         return ClaimsForHealthFacilitiesResultGQLType(
 
