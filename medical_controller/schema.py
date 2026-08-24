@@ -315,7 +315,8 @@ class Query(graphene.ObjectType):
         mission.percentage_two = str(percentage_categ_two)
         mission.percentage_three = str(percentage_categ_three)
         mission.percentage_four = str(percentage_categ_four)
-        mission.save(username=info.context.user.username)
+        if mission.is_dirty(check_relationship=True):
+            mission.save(username=info.context.user.username)
 
         return ClaimSampleResultGQLType(
             category_one=ClaimSampleCategoryGQLType(
