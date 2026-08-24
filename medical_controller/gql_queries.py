@@ -4,7 +4,12 @@ from location.schema import HealthFacilityGQLType, LocationGQLType
 from claim.gql_queries import ClaimGQLType
 from graphene_django import DjangoObjectType
 from core.schema import UserGQLType
-from .models import MedicalControlMission, MissionHealthFacility, FilteredClaimsForMission
+from .models import (
+    MedicalControlMission,
+    MissionHealthFacility,
+    FilteredClaimsForMission,
+    MissionActivityHistory
+)
 
 
 class MissionGQLType(DjangoObjectType):
@@ -53,5 +58,19 @@ class FilteredClaimsForMissionGQLType(DjangoObjectType):
         interfaces = (graphene.relay.Node,)
         filter_fields = {
             **prefix_filterset("claim__", ClaimGQLType._meta.filter_fields),
+        }
+        connection_class = ExtendedConnection
+
+
+class MissionActivityHistoryGQLType(DjangoObjectType):
+
+    client_mutation_id = graphene.String()
+
+
+    class Meta:
+        model = MissionActivityHistory
+        interfaces = (graphene.relay.Node,)
+        filter_fields = {
+            **prefix_filterset("mission__", MissionGQLType._meta.filter_fields),
         }
         connection_class = ExtendedConnection

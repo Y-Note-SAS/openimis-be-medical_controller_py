@@ -69,6 +69,7 @@ def _save_selected_claims(
     objects = []
 
     for claim in claims:
+        claim.update(claim_category=category)
         if claim.id in existing_ids:
             continue
 

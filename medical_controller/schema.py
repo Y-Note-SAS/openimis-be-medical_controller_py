@@ -7,12 +7,29 @@ from core.schema import UserGQLType
 from claim.gql_queries import ClaimGQLType
 from core.models import User
 from.gql_mutations import CreateMissionMutation, UpdateMissionMutation
-from .gql_queries import MissionGQLType, FilteredClaimsForMissionGQLType
-from .models import MedicalControlMission, FilteredClaimsForMission
+from .gql_queries import MissionGQLType, FilteredClaimsForMissionGQLType, MissionActivityHistoryGQLType
+from .models import MedicalControlMission, FilteredClaimsForMission, MissionActivityHistory
 from claim.models import Claim
 from .services import process_category
 from django.core.exceptions import ValidationError
 import graphene_django_optimizer as gql_optimizer
+
+
+class ClaimsForHealthFacilitiesResultGQLType(graphene.ObjectType):
+
+    total_categ1 = graphene.String()
+    total_categ2 = graphene.String()
+    total_categ3 = graphene.String()
+    total_categ4 = graphene.String()
+
+    percentage_categ1 = graphene.String()
+    percentage_categ2 = graphene.String()
+    percentage_categ3 = graphene.String()
+    percentage_categ4 = graphene.String()
+
+    claims = OrderedDjangoFilterConnectionField(
+        FilteredClaimsForMissionGQLType
+    )
 
 
 class ClaimSampleCategoryGQLType(graphene.ObjectType):
@@ -20,6 +37,7 @@ class ClaimSampleCategoryGQLType(graphene.ObjectType):
     total_category = graphene.Int()
     audited = graphene.Int()
     claims = graphene.List(ClaimGQLType)
+    percentage = graphene.String()
 
 
 class ClaimSampleResultGQLType(graphene.ObjectType):
@@ -51,14 +69,19 @@ class Query(graphene.ObjectType):
         UserGQLType
     )
 
-    claims_for_health_facilities = OrderedDjangoFilterConnectionField(
-        FilteredClaimsForMissionGQLType,
+    claims_for_health_facilities = graphene.Field(
+        ClaimsForHealthFacilitiesResultGQLType,
         health_facility_ids=graphene.List(
             graphene.Int,
             required=True
         ),
         mission_code=graphene.String(required=True),
         category=graphene.String(required=False)
+    )
+
+    mission_activity_history = OrderedDjangoFilterConnectionField(
+        MissionActivityHistoryGQLType,
+        mission_code=graphene.String(required=True)
     )
 
     get_claims_sample = graphene.Field(
@@ -91,32 +114,83 @@ class Query(graphene.ObjectType):
 
         health_facilities = kwargs.get(
             "health_facility_ids",
-            [],
+            []
         )
+        mission_code = kwargs.get(
+            "mission_code"
+        )
+        mission = MedicalControlMission.objects.filter(mission_code=mission_code).first()
+        if not mission:
+            raise ValidationError(_("mutation.mission.not.exist"))
+
+        # 1. Filtrer sans distinct, puis appliquer le filtre catégorie
+        base_query = FilteredClaimsForMission.objects.filter(
+            claim__health_facility__id__in=health_facilities,
+            mission=mission
+        )
+        category = kwargs.get("category", None)
+        if category:
+            base_query = base_query.filter(claim_category=category)
+
+        ids = base_query.values_list("id", flat=True).distinct()
+
+        query = FilteredClaimsForMission.objects.filter(id__in=ids)
+        claims = query
+
+        return ClaimsForHealthFacilitiesResultGQLType(
+
+            total_categ1=
+            FilteredClaimsForMission.objects.filter(
+                mission=mission,
+                claim_category="1",
+            ).count(),
+
+            total_categ2=
+            FilteredClaimsForMission.objects.filter(
+                mission=mission,
+                claim_category="2",
+            ).count(),
+
+            total_categ3=
+            FilteredClaimsForMission.objects.filter(
+                mission=mission,
+                claim_category="3",
+            ).count(),
+
+            total_categ4=
+            FilteredClaimsForMission.objects.filter(
+                mission=mission,
+                claim_category="4",
+            ).count(),
+
+            percentage_categ1=
+            mission.percentage_one,
+
+            percentage_categ2=
+            mission.percentage_two,
+
+            percentage_categ3=
+            mission.percentage_three,
+
+            percentage_categ4=
+            mission.percentage_four,
+
+            claims=claims,
+        )
+
+    def resolve_mission_activity_history(self, info, search=None, **kwargs):
+        if not info.context.user.has_perms(
+            MedicalControllerConfig.gql_mutation_medical_controller_perms):
+            raise PermissionDenied(_("unauthorized"))
 
         mission_code = kwargs.get(
             "mission_code"
         )
-
-        mission = (
-            MedicalControlMission.objects
-            .filter(
-                mission_code=mission_code
-            ).first()
-        )
+        mission = MedicalControlMission.objects.filter(mission_code=mission_code).first()
         if not mission:
-            raise ValidationError(
-                _("mutation.mission.not.exist")
-            )
+            raise ValidationError(_("mutation.mission.not.exist"))
 
-        query = FilteredClaimsForMission.objects.filter(
-            claim__health_facility__id__in=health_facilities,
-            mission=mission
-        ).distinct()
-        category = kwargs.get("category", None)
-
-        if category:
-            query = query.filter(claim_category=category)
+        query = MissionActivityHistory.objects.filter(mission=mission)
 
         return gql_optimizer.query(query, info)
 
@@ -224,26 +298,50 @@ class Query(graphene.ObjectType):
         )
         print("category_four_claims ", category_four_claims)
 
+        msg = _("Added filter %(kwargs)s on mission %(mission_code)s") % {
+            "kwargs": str(kwargs),
+            "mission_code": mission_code
+        }
+        mission_activity = MissionActivityHistory(
+            mission=mission,
+            action=msg,
+            user=info.context.user,
+            user_created=info.context.user,
+            user_updated=info.context.user,
+        )
+        mission_activity.save(username=info.context.user.username)
+
+        mission.percentage_one = str(percentage_categ_one)
+        mission.percentage_two = str(percentage_categ_two)
+        mission.percentage_three = str(percentage_categ_three)
+        mission.percentage_four = str(percentage_categ_four)
+        if mission.is_dirty(check_relationship=True):
+            mission.save(username=info.context.user.username)
+
         return ClaimSampleResultGQLType(
             category_one=ClaimSampleCategoryGQLType(
                 category="1",
                 total_category=build_category_result(mission, "1"),
                 claims=category_one_claims,
+                percentage=percentage_categ_one
             ),
             category_two=ClaimSampleCategoryGQLType(
                 category="2",
                 total_category=build_category_result(mission, "2"),
                 claims=category_two_claims,
+                percentage=percentage_categ_two
             ),
             category_three=ClaimSampleCategoryGQLType(
                 category="3",
                 total_category=build_category_result(mission, "3"),
                 claims=category_three_claims,
+                percentage=percentage_categ_three
             ),
             category_four=ClaimSampleCategoryGQLType(
                 category="4",
                 total_category=build_category_result(mission, "4"),
                 claims=category_four_claims,
+                percentage=percentage_categ_four
             )
         )
 
