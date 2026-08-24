@@ -15,6 +15,23 @@ from django.core.exceptions import ValidationError
 import graphene_django_optimizer as gql_optimizer
 
 
+class ClaimsForHealthFacilitiesResultGQLType(graphene.ObjectType):
+
+    total_categ1 = graphene.String()
+    total_categ2 = graphene.String()
+    total_categ3 = graphene.String()
+    total_categ4 = graphene.String()
+
+    percentage_categ1 = graphene.String()
+    percentage_categ2 = graphene.String()
+    percentage_categ3 = graphene.String()
+    percentage_categ4 = graphene.String()
+
+    claims = graphene.List(
+        FilteredClaimsForMissionGQLType
+    )
+
+
 class ClaimSampleCategoryGQLType(graphene.ObjectType):
     category = graphene.String()
     total_category = graphene.Int()
@@ -52,8 +69,8 @@ class Query(graphene.ObjectType):
         UserGQLType
     )
 
-    claims_for_health_facilities = OrderedDjangoFilterConnectionField(
-        FilteredClaimsForMissionGQLType,
+    claims_for_health_facilities = graphene.Field(
+        ClaimsForHealthFacilitiesResultGQLType,
         health_facility_ids=graphene.List(
             graphene.Int,
             required=True
@@ -115,13 +132,51 @@ class Query(graphene.ObjectType):
         if category:
             base_query = base_query.filter(claim_category=category)
 
-        # 2. Récupérer uniquement les IDs distincts (colonne comparable)
-        ids = base_query.values_list("id", flat=True).distinct()
+        # ids = base_query.values_list("id", flat=True).distinct()
 
-        # 3. Recharger les objets complets avec ces IDs
-        query = FilteredClaimsForMission.objects.filter(id__in=ids)
+        # query = FilteredClaimsForMission.objects.filter(id__in=ids)
+        claims = list(base_query)
 
-        return gql_optimizer.query(query, info)
+        return ClaimsForHealthFacilitiesResultGQLType(
+
+            total_categ1=
+            FilteredClaimsForMission.objects.filter(
+                mission=mission,
+                claim_category="1",
+            ).count(),
+
+            total_categ2=
+            FilteredClaimsForMission.objects.filter(
+                mission=mission,
+                claim_category="2",
+            ).count(),
+
+            total_categ3=
+            FilteredClaimsForMission.objects.filter(
+                mission=mission,
+                claim_category="3",
+            ).count(),
+
+            total_categ4=
+            FilteredClaimsForMission.objects.filter(
+                mission=mission,
+                claim_category="4",
+            ).count(),
+
+            percentage_categ1=
+            mission.percentage_one,
+
+            percentage_categ2=
+            mission.percentage_two,
+
+            percentage_categ3=
+            mission.percentage_three,
+
+            percentage_categ4=
+            mission.percentage_four,
+
+            claims=claims,
+        )
 
     def resolve_mission_activity_history(self, info, search=None, **kwargs):
         if not info.context.user.has_perms(
@@ -255,6 +310,12 @@ class Query(graphene.ObjectType):
             user_updated=info.context.user,
         )
         mission_activity.save(username=info.context.user.username)
+
+        mission.percentage_one = str(percentage_categ_one)
+        mission.percentage_two = str(percentage_categ_two)
+        mission.percentage_three = str(percentage_categ_three)
+        mission.percentage_four = str(percentage_categ_four)
+        mission.save(username=info.context.user.username)
 
         return ClaimSampleResultGQLType(
             category_one=ClaimSampleCategoryGQLType(
