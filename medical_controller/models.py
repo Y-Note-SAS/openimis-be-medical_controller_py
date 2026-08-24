@@ -5,6 +5,7 @@ from location.models import Location
 from location.models import HealthFacility
 from core.models import User
 from claim.models import Claim
+from django.utils import timezone as django_tz
 
 
 class MedicalControlMission(core_models.HistoryModel):
@@ -144,3 +145,34 @@ class MissionHealthFacility(core_models.HistoryModel):
 
     class Meta:
         db_table = "tblMedicalControlMissionHF"
+
+
+class MissionActivityHistory(core_models.HistoryModel):
+
+    mission = models.ForeignKey(
+        MedicalControlMission,
+        on_delete=models.DO_NOTHING,
+        related_name="activity_mission_hf"
+    )
+
+    action = models.TextField(
+        blank=True,
+        null=True,
+        db_column='Action'
+    )
+
+    action_date = models.DateTimeField(
+        blank=True,
+        null=True,
+        db_column='ActionDate',
+        default=django_tz.now
+    )
+
+    user = models.ForeignKey(
+        User,
+        db_column='userID',
+        on_delete=models.DO_NOTHING
+    )
+
+    class Meta:
+        db_table = "tblMissionActivityHistory"

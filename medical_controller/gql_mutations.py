@@ -3,7 +3,7 @@ from core.schema import OpenIMISMutation
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError
 from location.models import Location
-from .models import MedicalControlMission, MissionHealthFacility
+from .models import MedicalControlMission, MissionHealthFacility, MissionActivityHistory
 from django.utils.translation import gettext as _
 from .apps import MedicalControllerConfig
 from django.core.exceptions import PermissionDenied
@@ -127,6 +127,18 @@ class CreateMissionMutation(OpenIMISMutation):
             for hf_id in hf_ids
         ])
 
+        msg = _("Created mission %(mission_code)s") % {
+            "mission_code": mission.mission_code,
+        }
+        mission_activity = MissionActivityHistory(
+            mission=mission,
+            action=msg,
+            user=user,
+            user_created=user,
+            user_updated=user,
+        )
+        mission_activity.save(username=user.username)
+
 
 class UpdateMissionMutation(OpenIMISMutation):
 
@@ -181,3 +193,21 @@ class UpdateMissionMutation(OpenIMISMutation):
         mission.user_updated = user
         mission.date_updated = TimeUtils.now()
         mission.save(username=user.username)
+        types = {
+            "C": _("Closed"),
+            "P": _("In progess")
+        }
+        status = types.get(mission_status)
+
+        msg = _("Changed mission %(mission_code)s status to %(status)s") % {
+            "mission_code": mission.mission_code,
+            "status": status
+        }
+        mission_activity = MissionActivityHistory(
+            mission=mission,
+            action=msg,
+            user=user,
+            user_created=user,
+            user_updated=user,
+        )
+        mission_activity.save(username=user.username)
