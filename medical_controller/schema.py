@@ -91,32 +91,29 @@ class Query(graphene.ObjectType):
 
         health_facilities = kwargs.get(
             "health_facility_ids",
-            [],
+            []
         )
-
         mission_code = kwargs.get(
             "mission_code"
         )
-
-        mission = (
-            MedicalControlMission.objects
-            .filter(
-                mission_code=mission_code
-            ).first()
-        )
+        mission = MedicalControlMission.objects.filter(mission_code=mission_code).first()
         if not mission:
-            raise ValidationError(
-                _("mutation.mission.not.exist")
-            )
+            raise ValidationError(_("mutation.mission.not.exist"))
 
-        query = FilteredClaimsForMission.objects.filter(
+        # 1. Filtrer sans distinct, puis appliquer le filtre catégorie
+        base_query = FilteredClaimsForMission.objects.filter(
             claim__health_facility__id__in=health_facilities,
             mission=mission
-        ).distinct()
+        )
         category = kwargs.get("category", None)
-
         if category:
-            query = query.filter(claim_category=category)
+            base_query = base_query.filter(claim_category=category)
+
+        # 2. Récupérer uniquement les IDs distincts (colonne comparable)
+        ids = base_query.values_list("id", flat=True).distinct()
+
+        # 3. Recharger les objets complets avec ces IDs
+        query = FilteredClaimsForMission.objects.filter(id__in=ids)
 
         return gql_optimizer.query(query, info)
 
