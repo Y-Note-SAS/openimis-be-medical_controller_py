@@ -13,7 +13,7 @@ from claim.models import Claim
 from .services import process_category
 from django.core.exceptions import ValidationError
 import graphene_django_optimizer as gql_optimizer
-
+from django.db.models import Q
 
 class ClaimsForHealthFacilitiesResultGQLType(graphene.ObjectType):
 
@@ -79,6 +79,13 @@ class Query(graphene.ObjectType):
         category=graphene.String(required=False)
     )
 
+    check_mission_availability = graphene.Field(
+        graphene.Boolean,
+        district_id=graphene.Int(required=True),
+        start_date=graphene.Date(required=True),
+        end_date=graphene.Date(required=True)
+    )
+
     mission_activity_history = OrderedDjangoFilterConnectionField(
         MissionActivityHistoryGQLType,
         mission_code=graphene.String(required=True)
@@ -106,6 +113,20 @@ class Query(graphene.ObjectType):
             required=True
         )
     )
+
+    def resolve_check_mission_availability(self, info, **kwargs):
+
+        district_id = kwargs.get("district_id")
+        start_date = kwargs.get("start_date")
+        end_date = kwargs.get("end_date")
+
+        # Vérifie qu'il n'y a AUCUNE mission qui chevauche ce district sur cette période
+        if MedicalControlMission.objects.filter(
+            Q(start_date__lte=end_date) & Q(end_date__gte=start_date),
+            district__id=district_id
+        ).exists():
+            return False
+        return True
 
     def resolve_claims_for_health_facilities(self, info, search=None, **kwargs):
         if not info.context.user.has_perms(
