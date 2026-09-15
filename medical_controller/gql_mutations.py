@@ -10,6 +10,7 @@ from django.core.exceptions import PermissionDenied
 from core import TimeUtils
 import uuid
 
+
 class CreateMissionInputType(OpenIMISMutation.Input):
 
     region_id = graphene.Int(required=True)
@@ -32,6 +33,7 @@ class UpdateMissionInputType(OpenIMISMutation.Input):
 
     status = graphene.String(required=True)
     mission_code = graphene.String(required=True)
+
 
 def generate_mission_code(region):
     prefix = str(region.code)
