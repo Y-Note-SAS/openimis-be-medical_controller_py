@@ -1,19 +1,29 @@
 import graphene
-from core.schema import OrderedDjangoFilterConnectionField
-from .apps import MedicalControllerConfig
-from django.core.exceptions import PermissionDenied
-from django.utils.translation import gettext as _
-from core.schema import UserGQLType
-from claim.gql_queries import ClaimGQLType
-from core.models import User
-from.gql_mutations import CreateMissionMutation, UpdateMissionMutation
-from .gql_queries import MissionGQLType, FilteredClaimsForMissionGQLType, MissionActivityHistoryGQLType
-from .models import MedicalControlMission, FilteredClaimsForMission, MissionActivityHistory
-from claim.models import Claim
-from .services import process_category
-from django.core.exceptions import ValidationError
 import graphene_django_optimizer as gql_optimizer
+
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
+from django.utils.translation import gettext as _
+
+from claim.gql_queries import ClaimGQLType
+from claim.models import Claim
+from core.models import User
+from core.schema import OrderedDjangoFilterConnectionField, UserGQLType
+
+from .apps import MedicalControllerConfig
+from .gql_mutations import CreateMissionMutation, UpdateMissionMutation
+from .gql_queries import (
+    FilteredClaimsForMissionGQLType,
+    MissionActivityHistoryGQLType,
+    MissionGQLType,
+)
+from .models import (
+    FilteredClaimsForMission,
+    MedicalControlMission,
+    MissionActivityHistory,
+)
+from .services import process_category
+
 
 class ClaimsForHealthFacilitiesResultGQLType(graphene.ObjectType):
 
@@ -130,7 +140,8 @@ class Query(graphene.ObjectType):
 
     def resolve_claims_for_health_facilities(self, info, search=None, **kwargs):
         if not info.context.user.has_perms(
-            MedicalControllerConfig.gql_mutation_medical_controller_perms):
+            MedicalControllerConfig.gql_mutation_medical_controller_perms
+        ):
             raise PermissionDenied(_("unauthorized"))
 
         health_facilities = kwargs.get(
@@ -160,48 +171,41 @@ class Query(graphene.ObjectType):
 
         return ClaimsForHealthFacilitiesResultGQLType(
 
-            total_categ1=
-            FilteredClaimsForMission.objects.filter(
+            total_categ1=FilteredClaimsForMission.objects.filter(
                 mission=mission,
                 claim_category="1",
             ).count(),
 
-            total_categ2=
-            FilteredClaimsForMission.objects.filter(
+            total_categ2=FilteredClaimsForMission.objects.filter(
                 mission=mission,
                 claim_category="2",
             ).count(),
 
-            total_categ3=
-            FilteredClaimsForMission.objects.filter(
+            total_categ3=FilteredClaimsForMission.objects.filter(
                 mission=mission,
                 claim_category="3",
             ).count(),
 
-            total_categ4=
-            FilteredClaimsForMission.objects.filter(
+            total_categ4=FilteredClaimsForMission.objects.filter(
                 mission=mission,
                 claim_category="4",
             ).count(),
 
-            percentage_categ1=
-            mission.percentage_one,
+            percentage_categ1=mission.percentage_one,
 
-            percentage_categ2=
-            mission.percentage_two,
+            percentage_categ2=mission.percentage_two,
 
-            percentage_categ3=
-            mission.percentage_three,
+            percentage_categ3=mission.percentage_three,
 
-            percentage_categ4=
-            mission.percentage_four,
+            percentage_categ4=mission.percentage_four,
 
             claims=claims,
         )
 
     def resolve_mission_activity_history(self, info, search=None, **kwargs):
         if not info.context.user.has_perms(
-            MedicalControllerConfig.gql_mutation_medical_controller_perms):
+            MedicalControllerConfig.gql_mutation_medical_controller_perms
+        ):
             raise PermissionDenied(_("unauthorized"))
 
         mission_code = kwargs.get(
@@ -217,7 +221,8 @@ class Query(graphene.ObjectType):
 
     def resolve_medical_controllers(self, info, search=None, **kwargs):
         if not info.context.user.has_perms(
-            MedicalControllerConfig.gql_mutation_medical_controller_perms):
+            MedicalControllerConfig.gql_mutation_medical_controller_perms
+        ):
             raise PermissionDenied(_("unauthorized"))
 
         return User.objects.filter(

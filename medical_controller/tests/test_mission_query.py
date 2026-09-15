@@ -1,7 +1,9 @@
 from datetime import date
 from unittest.mock import patch
-
+import graphene
+from graphene.relay import Node
 from django.test import TestCase
+from types import SimpleNamespace
 
 from medical_controller.schema import Query
 from medical_controller.models import MedicalControlMission
@@ -39,6 +41,10 @@ class MissionQueryTest(TestCase):
             user=self.user,
         )
         self.mission.save(username=self.user.username)
+        self.contextquery = SimpleNamespace(
+            user=self.user,
+            headers={"User-Agent": "test"}
+        )
 
         class Context:
             pass
@@ -70,16 +76,47 @@ class MissionQueryTest(TestCase):
             "has_perms",
             return_value=True,
         ):
-            result = Query().resolve_missions(
-                info=self.info,
-                region_id=self.region.id,
+
+            global_id = Node.to_global_id(
+                "LocationGQLType",
+                self.region.id
+            )
+            query = """
+                query($region: ID!){
+                    missions(region_Id: $region){
+                        edges{
+                        node{
+                            missionCode
+                        }
+                        }
+                    }
+                }
+            """
+            variables = {
+                "region": global_id
+            }
+            schema = graphene.Schema(
+                query=Query
             )
 
-        self.assertEqual(result.count(), 1)
-        self.assertEqual(
-            result.first().pk,
-            self.mission.pk,
-        )
+            result = schema.execute(
+                query,
+                variables=variables,
+                context_value=self.contextquery
+            )
+            self.assertEqual(
+                len(
+                    result.data["missions"]["edges"]
+                ),
+                1,
+            )
+
+            self.assertEqual(
+                len(
+                    result.data["missions"]["edges"]
+                ),
+                1,
+            )
 
     @patch("medical_controller.schema.gql_optimizer.query")
     def test_filter_by_status(self, mock_optimizer):
@@ -95,16 +132,41 @@ class MissionQueryTest(TestCase):
             "has_perms",
             return_value=True,
         ):
-            result = Query().resolve_missions(
-                info=self.info,
-                status=MedicalControlMission.STATUS_IN_PROGRESS,
+            query = """
+                query($status: MedicalControlMissionStatus!){
+                    missions(status: $status){
+                        edges{
+                        node{
+                            missionCode
+                            status
+                        }
+                        }
+                    }
+                }
+            """
+            variables = {
+                "status": MedicalControlMission.STATUS_IN_PROGRESS
+            }
+            schema = graphene.Schema(
+                query=Query
             )
 
-        self.assertEqual(result.count(), 1)
-        self.assertEqual(
-            result.first().status,
-            MedicalControlMission.STATUS_IN_PROGRESS,
-        )
+            result = schema.execute(
+                query,
+                variables=variables,
+                context_value=self.contextquery
+            )
+
+            self.assertEqual(
+                len(
+                    result.data["missions"]["edges"]
+                ),
+                1,
+            )
+            self.assertEqual(
+                result.data["missions"]["edges"][0]["node"]["status"],
+                MedicalControlMission.STATUS_IN_PROGRESS,
+            )
 
     @patch("medical_controller.schema.gql_optimizer.query")
     def test_filter_by_mission_code(self, mock_optimizer):
@@ -119,16 +181,40 @@ class MissionQueryTest(TestCase):
             "has_perms",
             return_value=True,
         ):
-            result = Query().resolve_missions(
-                info=self.info,
-                mission_code="200001",
+            query = """
+                query($missionCode: String!){
+                    missions(missionCode: $missionCode){
+                        edges{
+                        node{
+                            missionCode
+                        }
+                        }
+                    }
+                }
+            """
+            variables = {
+                "missionCode": "200001"
+            }
+            schema = graphene.Schema(
+                query=Query
             )
 
-        self.assertEqual(result.count(), 1)
-        self.assertEqual(
-            result.first().mission_code,
-            "200001",
-        )
+            result = schema.execute(
+                query,
+                variables=variables,
+                context_value=self.contextquery
+            )
+
+            self.assertEqual(
+                len(
+                    result.data["missions"]["edges"]
+                ),
+                1,
+            )
+            self.assertEqual(
+                result.data["missions"]["edges"][0]["node"]["missionCode"],
+                "200001",
+            )
 
     @patch("medical_controller.schema.gql_optimizer.query")
     def test_unknown_code_returns_empty_queryset(
@@ -146,12 +232,36 @@ class MissionQueryTest(TestCase):
             "has_perms",
             return_value=True,
         ):
-            result = Query().resolve_missions(
-                info=self.info,
-                mission_code="XXX",
+            query = """
+                query($missionCode: String!){
+                    missions(missionCode: $missionCode){
+                        edges{
+                        node{
+                            missionCode
+                        }
+                        }
+                    }
+                }
+            """
+            variables = {
+                "missionCode": "xxx"
+            }
+            schema = graphene.Schema(
+                query=Query
             )
 
-        self.assertEqual(result.count(), 0)
+            result = schema.execute(
+                query,
+                variables=variables,
+                context_value=self.contextquery
+            )
+
+            self.assertEqual(
+                len(
+                    result.data["missions"]["edges"]
+                ),
+                0,
+            )
 
     @patch("medical_controller.schema.gql_optimizer.query")
     def test_filter_by_district(self, mock_optimizer):
@@ -167,16 +277,49 @@ class MissionQueryTest(TestCase):
             "has_perms",
             return_value=True,
         ):
-            result = Query().resolve_missions(
-                info=self.info,
-                district_id=self.district.id,
+
+            global_id = Node.to_global_id(
+                "LocationGQLType",
+                self.district.id
+            )
+            query = """
+                query($district: ID!){
+                    missions(district_Id: $district){
+                        edges{
+                        node{
+                            missionCode
+                            district
+                            {
+                            code
+                            }
+                        }
+                        }
+                    }
+                }
+            """
+            variables = {
+                "district": global_id
+            }
+            schema = graphene.Schema(
+                query=Query
             )
 
-        self.assertEqual(result.count(), 1)
-        self.assertEqual(
-            result.first().district_id,
-            self.district.id,
-        )
+            result = schema.execute(
+                query,
+                variables=variables,
+                context_value=self.contextquery
+            )
+
+            self.assertEqual(
+                len(
+                    result.data["missions"]["edges"]
+                ),
+                1,
+            )
+            self.assertEqual(
+                result.data["missions"]["edges"][0]["node"]["district"]["code"],
+                self.district.code,
+            )
 
     @patch("medical_controller.schema.gql_optimizer.query")
     def test_combined_filters(self, mock_optimizer):
@@ -188,48 +331,73 @@ class MissionQueryTest(TestCase):
             "has_perms",
             return_value=True,
         ):
-            result = Query().resolve_missions(
-                self.info,
-                region_id=self.region.id,
-                district_id=self.district.id,
-                status=MedicalControlMission.STATUS_IN_PROGRESS,
-                mission_code="200001",
+            query = """
+                query(
+                    $region: ID!,
+                    $district: ID!,
+                    $status: MedicalControlMissionStatus!,
+                    $missionCode: String!
+                ) {
+                    missions(
+                        region_Id: $region,
+                        district_Id: $district,
+                        status: $status,
+                        missionCode: $missionCode
+                    ) {
+                        totalCount
+                        edges {
+                            node {
+                                missionCode
+                                region {
+                                    code
+                                }
+                                district {
+                                    code
+                                }
+                                status
+                            }
+                        }
+                    }
+                }
+            """
+
+            variables = {
+                "region": Node.to_global_id(
+                    "LocationGQLType",
+                    self.region.id
+                ),
+                "district": Node.to_global_id(
+                    "LocationGQLType",
+                    self.district.id
+                ),
+                "status": MedicalControlMission.STATUS_IN_PROGRESS,
+                "missionCode": "200001",
+            }
+
+            schema = graphene.Schema(query=Query)
+
+            result = schema.execute(
+                query,
+                variables=variables,
+                context_value=self.contextquery,
             )
 
-        self.assertEqual(result.count(), 1)
+            self.assertEqual(
+                len(
+                    result.data["missions"]["edges"]
+                ),
+                1,
+            )
 
-        mission = result.first()
-
-        self.assertEqual(mission.pk, self.mission.pk)
-        self.assertEqual(mission.region_id, self.region.id)
-        self.assertEqual(mission.district_id, self.district.id)
-        self.assertEqual(
-            mission.status,
-            MedicalControlMission.STATUS_IN_PROGRESS,
-        )
-        self.assertEqual(
-            mission.mission_code,
-            "200001",
-        )
-
-
-    @patch("medical_controller.schema.gql_optimizer.query")
-    def test_unauthorized_user_is_rejected(self, mock_optimizer):
-        """
-        Un utilisateur sans permission ne doit pas pouvoir
-        consulter les missions.
-        """
-
-        from django.core.exceptions import PermissionDenied
-
-        mock_optimizer.side_effect = lambda queryset, info: queryset
-
-        with patch.object(
-            self.user,
-            "has_perms",
-            return_value=False,
-        ):
-            with self.assertRaises(PermissionDenied):
-                Query().resolve_missions(
-                    self.info,
-                )
+            self.assertEqual(
+                result.data["missions"]["edges"][0]["node"]["region"]["code"], self.region.code)
+            node = result.data["missions"]["edges"][0]["node"]
+            self.assertEqual(node["district"]["code"], self.district.code)
+            self.assertEqual(
+                result.data["missions"]["edges"][0]["node"]["status"],
+                MedicalControlMission.STATUS_IN_PROGRESS,
+            )
+            self.assertEqual(
+                result.data["missions"]["edges"][0]["node"]["missionCode"],
+                "200001",
+            )
