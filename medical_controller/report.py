@@ -10,6 +10,6 @@ report_definitions = [
         "description": "Rapport audit des Factures",
         "module": "reportcsu",
         "python_query": medical_controller_claims_report_query, 
-        "permission": ["112000"],
+        "permission": ["131215"],
     }
 ]
