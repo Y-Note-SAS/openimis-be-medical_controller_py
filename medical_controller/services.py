@@ -1,7 +1,6 @@
 import math
 import uuid
 import random
-from django.utils.translation import gettext as _
 from decimal import Decimal
 from claim.models import Claim
 from medical.models import PackageTypes
