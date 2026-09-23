@@ -9,7 +9,7 @@ report_definitions = [
         "default_report": medical_controller_claim_report.template,
         "description": "Rapport audit des Factures",
         "module": "reportcsu",
-        "python_query": medical_controller_claims_report_query, 
+        "python_query": medical_controller_claims_report_query,
         "permission": ["112000"],
     }
 ]

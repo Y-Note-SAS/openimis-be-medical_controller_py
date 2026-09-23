@@ -177,5 +177,6 @@ class MissionActivityHistory(core_models.HistoryModel):
     class Meta:
         db_table = "tblMissionActivityHistory"
 
+
 def medical_controller_claims_report_query():
     return []
