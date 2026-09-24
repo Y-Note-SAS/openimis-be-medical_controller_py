@@ -16,6 +16,7 @@ from .models import (
     FilteredClaimsForMission
 )
 
+
 @api_view(["GET"])
 @permission_classes(
     [
@@ -30,7 +31,6 @@ def download_mission(request, mission_code):
         .select_related("user")
         .get(mission_code=mission_code)
     )
-    print("ABC")
 
     wb = Workbook()
     ws = wb.active
@@ -48,7 +48,7 @@ def download_mission(request, mission_code):
     ws.cell(row=row, column=2, value=mission.mission_code)
 
     ws.cell(row=row, column=8, value=_("Téléchargé le"))
-    ws.cell(row=row, column=9, value = datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+    ws.cell(row=row, column=9, value=datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
     row += 1
 
