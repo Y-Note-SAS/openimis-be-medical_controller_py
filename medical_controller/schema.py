@@ -44,6 +44,8 @@ class ClaimsForHealthFacilitiesResultGQLType(graphene.ObjectType):
         FilteredClaimsForMissionGQLType
     )
 
+    all_audited = graphene.Boolean()
+
 
 class ClaimSampleCategoryGQLType(graphene.ObjectType):
     category = graphene.String()
@@ -172,6 +174,11 @@ class Query(graphene.ObjectType):
         query = FilteredClaimsForMission.objects.filter(id__in=ids)
         claims = query
 
+        all_audited = True
+        for mission_claim in claims:
+            if not mission_claim.claim.audited:
+                all_audited = False
+
         return ClaimsForHealthFacilitiesResultGQLType(
 
             total_categ1=FilteredClaimsForMission.objects.filter(
@@ -203,6 +210,8 @@ class Query(graphene.ObjectType):
             percentage_categ4=mission.percentage_four,
 
             claims=claims,
+
+            all_audited=all_audited
         )
 
     def resolve_mission_activity_history(self, info, search=None, **kwargs):

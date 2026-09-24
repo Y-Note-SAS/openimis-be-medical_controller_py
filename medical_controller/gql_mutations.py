@@ -198,11 +198,11 @@ class UpdateMissionMutation(OpenIMISMutation):
         )
 
         if mission_status == "C":
-            claims = FilteredClaimsForMission.objects.filter(
+            claims_for_mission = FilteredClaimsForMission.objects.filter(
                 mission=mission
             ).all()
-            for claim in claims:
-                if not claim.audited:
+            for missionclaim in claims_for_mission:
+                if not missionclaim.claim.audited:
                     return [
                         {
                             'message': _("mutation.all_claims_not_audited"),

@@ -1,5 +1,5 @@
 from datetime import date
-
+import uuid
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from medical_controller.gql_mutations import (
@@ -10,10 +10,11 @@ from location.test_helpers import create_test_health_facility, create_test_locat
 from medical_controller.models import (
     MedicalControlMission,
     MissionHealthFacility,
-    MissionActivityHistory
+    MissionActivityHistory,
+    FilteredClaimsForMission
 )
 from core.test_helpers import create_test_interactive_user
-
+from claim.test_helpers import create_test_claim
 from location.models import (
     Location
 )
@@ -279,3 +280,37 @@ class CreateMissionMutationTest(TestCase):
             MissionActivityHistory.objects.count(),
             initial_count + 1
         )
+
+    def test_update_forbiden_when_all_claims_not_audited(self):
+    
+        CreateMissionMutation.async_mutate(
+            self.user,
+            region_id=self.region.id,
+            district_id=self.district.id,
+            health_facility_ids=[self.hf1.id],
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+        )
+
+        mission = MedicalControlMission.objects.get()
+
+        claim = create_test_claim()
+
+        filtred_claims = FilteredClaimsForMission(
+            id=uuid.uuid4(),
+            mission=mission,
+            claim=claim,
+            claim_category="1",
+            audited=False,
+            from_rejected_to_valuated=False,
+            user_created=self.user,
+            user_updated=self.user,
+        )
+        filtred_claims.save(username=self.user.username)
+
+        res = UpdateMissionMutation.async_mutate(
+            self.user,
+            mission_code=mission.mission_code,
+            status="C"
+        )
+        self.assertEqual(res[0]["message"], "mutation.all_claims_not_audited")
