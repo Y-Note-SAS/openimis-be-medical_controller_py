@@ -282,7 +282,7 @@ class CreateMissionMutationTest(TestCase):
         )
 
     def test_update_forbiden_when_all_claims_not_audited(self):
-    
+
         CreateMissionMutation.async_mutate(
             self.user,
             region_id=self.region.id,
