@@ -283,7 +283,7 @@ class UpdateMissionMutation(OpenIMISMutation):
                 mission_code=mission_code
             )
         )
-        status = types.get(mission_status)
+
         if mission_status == "C":
             claims = FilteredClaimsForMission.objects.filter(
                 mission=mission
@@ -304,6 +304,7 @@ class UpdateMissionMutation(OpenIMISMutation):
             "C": _("Closed"),
             "P": _("In progess")
         }
+        status = types.get(mission_status)
 
         msg = _("Changed mission %(mission_code)s status to %(status)s") % {
             "mission_code": mission.mission_code,
