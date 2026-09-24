@@ -11,7 +11,11 @@ from core.models import User
 from core.schema import OrderedDjangoFilterConnectionField, UserGQLType
 
 from .apps import MedicalControllerConfig
-from .gql_mutations import CreateMissionMutation, UpdateMissionMutation
+from .gql_mutations import (
+    CreateMissionMutation,
+    UpdateMissionMutation,
+    SetRemainingClaimsToAuditedMutation
+)
 from .gql_queries import (
     FilteredClaimsForMissionGQLType,
     MissionActivityHistoryGQLType,
@@ -398,3 +402,4 @@ def build_category_result(
 class Mutation(graphene.ObjectType):
     create_mission = CreateMissionMutation.Field()
     update_mission = UpdateMissionMutation.Field()
+    set_remaining_claims_to_audited = SetRemainingClaimsToAuditedMutation.Field()

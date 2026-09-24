@@ -3,12 +3,18 @@ from core.schema import OpenIMISMutation
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError
 from location.models import Location
-from .models import MedicalControlMission, MissionHealthFacility, MissionActivityHistory
+from .models import (
+    MedicalControlMission,
+    MissionHealthFacility,
+    MissionActivityHistory,
+    FilteredClaimsForMission
+)
 from django.utils.translation import gettext as _
 from .apps import MedicalControllerConfig
 from django.core.exceptions import PermissionDenied
 from core import TimeUtils
 import uuid
+from medical_controller.services import _get_category_queryset
 
 
 class CreateMissionInputType(OpenIMISMutation.Input):
@@ -28,6 +34,14 @@ class CreateMissionInputType(OpenIMISMutation.Input):
 
     status = graphene.String(required=False)
 
+
+class SetRemainingClaimsToAuditedInputType(OpenIMISMutation.Input):
+
+    mission_code = graphene.String(required=True)
+    health_facility_ids = graphene.List(
+        graphene.Int,
+        required=True
+    )
 
 class UpdateMissionInputType(OpenIMISMutation.Input):
 
@@ -142,6 +156,84 @@ class CreateMissionMutation(OpenIMISMutation):
         mission_activity.save(username=user.username)
 
 
+class SetRemainingClaimsToAuditedMutation(OpenIMISMutation):
+
+    _mutation_module = "medical_controller"
+
+    _mutation_class = "SetRemainingClaimsToAuditedMutation"
+    _model = MedicalControlMission
+
+    @classmethod
+    def _validate_mutation(cls, user, **data):
+        if type(user) is AnonymousUser or not user.id:
+            raise ValidationError("mutation.authentication_required")
+        if not user.has_perms(
+                MedicalControllerConfig.gql_mutation_medical_controller_perms):
+            raise PermissionDenied(_("unauthorized"))
+
+    class Input(SetRemainingClaimsToAuditedInputType):
+        pass
+
+    @classmethod
+    def async_mutate(cls, user, **data):
+
+        if type(user) is AnonymousUser or not user.id:
+            raise ValidationError(
+                _("mutation.authentication_required")
+            )
+
+        mission_code = data.get("mission_code", None)
+        health_facility_ids = data.get("health_facility_ids", [])
+        if not mission_code:
+            return [
+                {
+                    'message': _("mutation.no_mission_code_sent_for_update"),
+                    'detail': _("You must provide a mission code")
+                }
+            ]
+        queryset_categ1 = _get_category_queryset(
+            "1",
+            health_facility_ids,
+        )
+        queryset_categ2 = _get_category_queryset(
+            "2",
+            health_facility_ids,
+        )
+        queryset_categ3 = _get_category_queryset(
+            "3",
+            health_facility_ids,
+        )
+        queryset_categ4 = _get_category_queryset(
+            "4",
+            health_facility_ids,
+        )
+        all_query_set = queryset_categ1 + queryset_categ2 + queryset_categ3 + queryset_categ4
+
+        mission = (
+            MedicalControlMission.objects
+            .get(
+                mission_code=mission_code
+            )
+        )
+
+        already_selected_ids = (
+            FilteredClaimsForMission.objects
+            .filter(
+                mission=mission
+            )
+            .values_list(
+                "claim_id",
+                flat=True,
+            )
+        )
+
+        remaining_queryset = all_query_set.exclude(
+            id__in=already_selected_ids,
+        )
+        print("remaining_queryset ", remaining_queryset)
+        remaining_queryset.update(audited=True)
+
+
 class UpdateMissionMutation(OpenIMISMutation):
 
     _mutation_module = "medical_controller"
@@ -191,6 +283,19 @@ class UpdateMissionMutation(OpenIMISMutation):
                 mission_code=mission_code
             )
         )
+        status = types.get(mission_status)
+        if mission_status == "C":
+            claims = FilteredClaimsForMission.objects.filter(
+                mission=mission
+            ).all()
+            for claim in claims:
+                if not claim.audited:
+                    return [
+                        {
+                            'message': _("mutation.all_claims_not_audited"),
+                            'detail': _("You must audit all claims before closing the mission")
+                        }
+                    ]
         mission.status = mission_status
         mission.user_updated = user
         mission.date_updated = TimeUtils.now()
@@ -199,7 +304,6 @@ class UpdateMissionMutation(OpenIMISMutation):
             "C": _("Closed"),
             "P": _("In progess")
         }
-        status = types.get(mission_status)
 
         msg = _("Changed mission %(mission_code)s status to %(status)s") % {
             "mission_code": mission.mission_code,
