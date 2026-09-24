@@ -3,7 +3,12 @@ from core.schema import OpenIMISMutation
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError
 from location.models import Location
-from .models import MedicalControlMission, MissionHealthFacility, MissionActivityHistory
+from .models import (
+    MedicalControlMission,
+    MissionHealthFacility,
+    MissionActivityHistory,
+    FilteredClaimsForMission
+)
 from django.utils.translation import gettext as _
 from .apps import MedicalControllerConfig
 from django.core.exceptions import PermissionDenied
@@ -191,6 +196,19 @@ class UpdateMissionMutation(OpenIMISMutation):
                 mission_code=mission_code
             )
         )
+
+        if mission_status == "C":
+            claims_for_mission = FilteredClaimsForMission.objects.filter(
+                mission=mission
+            ).all()
+            for missionclaim in claims_for_mission:
+                if not missionclaim.claim.audited:
+                    return [
+                        {
+                            'message': _("mutation.all_claims_not_audited"),
+                            'detail': _("You must audit all claims before closing the mission")
+                        }
+                    ]
         mission.status = mission_status
         mission.user_updated = user
         mission.date_updated = TimeUtils.now()
