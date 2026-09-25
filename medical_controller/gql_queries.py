@@ -36,7 +36,6 @@ class MissionHFGQLType(DjangoObjectType):
 
     client_mutation_id = graphene.String()
 
-
     class Meta:
         model = MissionHealthFacility
         interfaces = (graphene.relay.Node,)
@@ -52,7 +51,6 @@ class FilteredClaimsForMissionGQLType(DjangoObjectType):
 
     client_mutation_id = graphene.String()
 
-
     class Meta:
         model = FilteredClaimsForMission
         interfaces = (graphene.relay.Node,)
@@ -65,7 +63,6 @@ class FilteredClaimsForMissionGQLType(DjangoObjectType):
 class MissionActivityHistoryGQLType(DjangoObjectType):
 
     client_mutation_id = graphene.String()
-
 
     class Meta:
         model = MissionActivityHistory
