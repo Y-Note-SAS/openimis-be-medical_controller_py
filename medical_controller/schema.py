@@ -41,7 +41,8 @@ class ClaimsForHealthFacilitiesResultGQLType(graphene.ObjectType):
     percentage_categ4 = graphene.String()
 
     claims = OrderedDjangoFilterConnectionField(
-        FilteredClaimsForMissionGQLType
+        FilteredClaimsForMissionGQLType,
+        orderBy=graphene.List(of_type=graphene.String),
     )
 
     all_audited = graphene.Boolean()
@@ -91,7 +92,11 @@ class Query(graphene.ObjectType):
             required=True
         ),
         mission_code=graphene.String(required=True),
-        category=graphene.String(required=False)
+        category=graphene.String(required=False),
+        services=graphene.List(
+            graphene.String,
+            required=False
+        )
     )
 
     check_mission_availability = graphene.Field(
@@ -169,15 +174,25 @@ class Query(graphene.ObjectType):
         if category:
             base_query = base_query.filter(claim_category=category)
 
+        services = kwargs.get("services", None) or []
+        if services:
+            # le JOIN sur les prestations duplique les lignes -> distinct ci-dessous
+            base_query = base_query.filter(
+                claim__services__service__code__in=services
+            )
+
         ids = base_query.values_list("id", flat=True).distinct()
 
         query = FilteredClaimsForMission.objects.filter(id__in=ids)
-        claims = query
+        # tri par defaut : date de visite croissante (stable pour la pagination)
+        claims = query.order_by("claim__date_to", "claim__id")
 
-        all_audited = True
-        for mission_claim in claims:
-            if not mission_claim.claim.audited:
-                all_audited = False
+        # l'etat d'audit porte sur TOUS les claims de la mission, filtres ignores
+        all_audited = not FilteredClaimsForMission.objects.filter(
+            mission=mission
+        ).filter(
+            Q(claim__audited__isnull=True) | Q(claim__audited=False)
+        ).exists()
 
         return ClaimsForHealthFacilitiesResultGQLType(
 
