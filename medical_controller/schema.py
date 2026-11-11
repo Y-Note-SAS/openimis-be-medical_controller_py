@@ -165,6 +165,10 @@ class Query(graphene.ObjectType):
             claim__health_facility__id__in=health_facilities,
             mission=mission
         )
+        all_audited = True
+        for mission_claim in base_query:
+            if not mission_claim.claim.audited:
+                all_audited = False
         category = kwargs.get("category", None)
         if category:
             base_query = base_query.filter(claim_category=category)
@@ -173,11 +177,6 @@ class Query(graphene.ObjectType):
 
         query = FilteredClaimsForMission.objects.filter(id__in=ids)
         claims = query
-
-        all_audited = True
-        for mission_claim in claims:
-            if not mission_claim.claim.audited:
-                all_audited = False
 
         return ClaimsForHealthFacilitiesResultGQLType(
 
