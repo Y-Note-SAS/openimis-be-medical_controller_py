@@ -72,6 +72,9 @@ class ClaimSampleResultGQLType(graphene.ObjectType):
         ClaimSampleCategoryGQLType
     )
 
+    category_five = graphene.Field(
+        ClaimSampleCategoryGQLType
+    )
 
 class Query(graphene.ObjectType):
 
@@ -118,6 +121,9 @@ class Query(graphene.ObjectType):
             required=True
         ),
         percentage_categ_four=graphene.String(
+            required=True
+        ),
+        percentage_categ_five=graphene.String(
             required=True
         ),
         mission_code=graphene.String(
@@ -299,6 +305,12 @@ class Query(graphene.ObjectType):
             )
         )
 
+        percentage_categ_five = int(
+            kwargs.get(
+                "percentage_categ_five"
+            )
+        )
+
         category_one_claims = process_category(
             mission=mission,
             category="1",
@@ -335,6 +347,15 @@ class Query(graphene.ObjectType):
         )
         print("category_four_claims ", category_four_claims)
 
+        category_five_claims = process_category(
+            mission=mission,
+            category="5",
+            percentage=percentage_categ_five,
+            health_facilities=health_facilities,
+            user=info.context.user
+        )
+        print("category_five_claims ", category_five_claims)
+
         msg = _("Added filter %(kwargs)s on mission %(mission_code)s") % {
             "kwargs": str(kwargs),
             "mission_code": mission_code
@@ -352,6 +373,7 @@ class Query(graphene.ObjectType):
         mission.percentage_two = str(percentage_categ_two)
         mission.percentage_three = str(percentage_categ_three)
         mission.percentage_four = str(percentage_categ_four)
+        mission.percentage_five = str(percentage_categ_five)
         if mission.is_dirty(check_relationship=True):
             mission.save(username=info.context.user.username)
 
@@ -379,6 +401,12 @@ class Query(graphene.ObjectType):
                 total_category=build_category_result(mission, "4"),
                 claims=category_four_claims,
                 percentage=percentage_categ_four
+            ),
+            category_five=ClaimSampleCategoryGQLType(
+                category="5",
+                total_category=build_category_result(mission, "5"),
+                claims=category_five_claims,
+                percentage=percentage_categ_five
             )
         )
 

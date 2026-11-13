@@ -224,6 +224,33 @@ class ServicesTest(TestCase):
             user
         )
 
+        result = process_category(
+            mission=mission,
+            category="5",
+            percentage=10,
+            health_facilities=[1],
+            user=user
+        )
+
+        self.assertEqual(
+            result,
+            selected
+        )
+
+        mock_get_queryset.assert_called_once_with(
+            "5",
+            [1]
+        )
+
+        mock_sample.assert_called_once()
+
+        mock_save.assert_called_once_with(
+            mission,
+            selected,
+            "5",
+            user
+        )
+
     @patch("medical_controller.services._save_selected_claims")
     @patch("medical_controller.services._sample_claims")
     @patch("medical_controller.services._get_category_queryset")

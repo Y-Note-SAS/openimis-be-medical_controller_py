@@ -89,6 +89,13 @@ class MedicalControlMission(core_models.HistoryModel):
         db_column='PercentageFour'
     )
 
+    percentage_five = models.CharField(
+        max_length=3,
+        blank=True,
+        null=True,
+        db_column='PercentageFive'
+    )
+
     class Meta:
         db_table = "tblMedicalControlMission"
 
