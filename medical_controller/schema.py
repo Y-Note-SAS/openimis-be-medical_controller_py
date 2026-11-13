@@ -34,11 +34,13 @@ class ClaimsForHealthFacilitiesResultGQLType(graphene.ObjectType):
     total_categ2 = graphene.String()
     total_categ3 = graphene.String()
     total_categ4 = graphene.String()
+    total_categ5 = graphene.String()
 
     percentage_categ1 = graphene.String()
     percentage_categ2 = graphene.String()
     percentage_categ3 = graphene.String()
     percentage_categ4 = graphene.String()
+    percentage_categ5 = graphene.String()
 
     claims = OrderedDjangoFilterConnectionField(
         FilteredClaimsForMissionGQLType
@@ -206,6 +208,11 @@ class Query(graphene.ObjectType):
                 claim_category="4",
             ).count(),
 
+            total_categ5=FilteredClaimsForMission.objects.filter(
+                mission=mission,
+                claim_category="5",
+            ).count(),
+
             percentage_categ1=mission.percentage_one,
 
             percentage_categ2=mission.percentage_two,
@@ -213,6 +220,8 @@ class Query(graphene.ObjectType):
             percentage_categ3=mission.percentage_three,
 
             percentage_categ4=mission.percentage_four,
+
+            percentage_categ5=mission.percentage_five,
 
             claims=claims,
 
