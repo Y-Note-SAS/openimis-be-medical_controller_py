@@ -213,7 +213,8 @@ class ServicesTest(TestCase):
 
         mock_get_queryset.assert_called_once_with(
             "1",
-            [1]
+            [1],
+            mission
         )
 
         mock_sample.assert_called_once()
