@@ -99,8 +99,8 @@ def _get_category_queryset(
     base_queryset = Claim.objects.filter(
         validity_to__isnull=True,
         health_facility_id__in=health_facilities,
-        date_claimed__gte=mission.date_from,
-        date_claimed__lte=mission.date_to
+        date_claimed__gte=mission.start_date,
+        date_claimed__lte=mission.end_date
     )
 
     if category == "1":
