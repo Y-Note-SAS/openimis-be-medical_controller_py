@@ -168,10 +168,13 @@ def _save_selected_claims(
 def _get_category_queryset(
     category,
     health_facilities,
+    mission
 ):
     base_queryset = Claim.objects.filter(
         validity_to__isnull=True,
         health_facility_id__in=health_facilities,
+        date_claimed__gte=mission.date_from,
+        date_claimed__lte=mission.date_to
     )
 
     if category == "1":
@@ -247,6 +250,7 @@ def process_category(
     queryset = _get_category_queryset(
         category,
         health_facilities,
+        mission
     )
 
     already_selected_ids = (
