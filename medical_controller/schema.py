@@ -327,7 +327,6 @@ class Query(graphene.ObjectType):
             health_facilities=health_facilities,
             user=info.context.user
         )
-        print("category_one_claims ", category_one_claims)
 
         category_two_claims = process_category(
             mission=mission,
@@ -336,7 +335,6 @@ class Query(graphene.ObjectType):
             health_facilities=health_facilities,
             user=info.context.user
         )
-        print("category_two_claims ", category_two_claims)
 
         category_three_claims = process_category(
             mission=mission,
@@ -345,7 +343,6 @@ class Query(graphene.ObjectType):
             health_facilities=health_facilities,
             user=info.context.user
         )
-        print("category_three_claims ", category_three_claims)
 
         category_four_claims = process_category(
             mission=mission,
@@ -354,7 +351,6 @@ class Query(graphene.ObjectType):
             health_facilities=health_facilities,
             user=info.context.user
         )
-        print("category_four_claims ", category_four_claims)
 
         category_five_claims = process_category(
             mission=mission,
@@ -363,7 +359,6 @@ class Query(graphene.ObjectType):
             health_facilities=health_facilities,
             user=info.context.user
         )
-        print("category_five_claims ", category_five_claims)
 
         msg = _("Added filter %(kwargs)s on mission %(mission_code)s") % {
             "kwargs": str(kwargs),
