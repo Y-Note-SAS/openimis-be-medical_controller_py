@@ -45,6 +45,8 @@ class MedicalControlMission(core_models.HistoryModel):
 
     end_date = models.DateField()
 
+    mission_date = models.DateTimeField()
+
     status = models.CharField(
         max_length=1,
         choices=STATUS_CHOICES,
