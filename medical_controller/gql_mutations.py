@@ -7,7 +7,8 @@ from .models import (
     MedicalControlMission,
     MissionHealthFacility,
     MissionActivityHistory,
-    FilteredClaimsForMission
+    FilteredClaimsForMission,
+    MissionUsers
 )
 from django.utils.translation import gettext as _
 from .apps import MedicalControllerConfig
@@ -27,6 +28,11 @@ class CreateMissionInputType(OpenIMISMutation.Input):
         required=True
     )
 
+    user_ids = graphene.List(
+        graphene.Int,
+        required=False
+    )
+
     start_date = graphene.Date(required=True)
 
     end_date = graphene.Date(required=True)
@@ -40,6 +46,10 @@ class UpdateMissionInputType(OpenIMISMutation.Input):
 
     status = graphene.String(required=True)
     mission_code = graphene.String(required=True)
+    user_ids = graphene.List(
+        graphene.Int,
+        required=False
+    )
 
 
 def generate_mission_code(region):
@@ -104,6 +114,8 @@ class CreateMissionMutation(OpenIMISMutation):
 
         hf_ids = data["health_facility_ids"]
 
+        user_ids = data.get("user_ids", [])
+
         if not hf_ids:
             raise ValidationError(
                 _("At least one health facility is required")
@@ -136,6 +148,18 @@ class CreateMissionMutation(OpenIMISMutation):
             )
             for hf_id in hf_ids
         ])
+
+        if user_ids:
+            MissionUsers.objects.bulk_create([
+                MissionUsers(
+                    id=uuid.uuid4(),
+                    mission=mission,
+                    user_created=user,
+                    user_updated=user,
+                    user_id=user_id
+                )
+                for user_id in user_ids
+            ])
 
         msg = _("Created mission %(mission_code)s") % {
             "mission_code": mission.mission_code,
@@ -199,6 +223,22 @@ class UpdateMissionMutation(OpenIMISMutation):
                 mission_code=mission_code
             )
         )
+        user_ids = data.get("user_ids", [])
+        MissionUsers.objects.filter(mission=mission).delete()
+        MissionUsers.objects.bulk_create([
+            MissionUsers(
+                id=uuid.uuid4(),
+                mission=mission,
+                user_created=user,
+                user_updated=user,
+                user_id=user_id
+            )
+            for user_id in user_ids
+        ])
+        msg = _("Set controllers to %(user_ids)s on the mission %(mission_code)s") % {
+            "user_ids": user_ids,
+            "mission_code": mission.mission_code
+        }
 
         if mission_status == "C":
             claims_for_mission = FilteredClaimsForMission.objects.filter(
@@ -212,20 +252,22 @@ class UpdateMissionMutation(OpenIMISMutation):
                             'detail': _("You must audit all claims before closing the mission")
                         }
                     ]
-        mission.status = mission_status
+        if mission.status != mission_status:
+            types = {
+                "C": _("Closed"),
+                "P": _("In progess")
+            }
+            status = types.get(mission_status)
+
+            mission.status = mission_status
+            msg += _("Changed mission %(mission_code)s status to %(status)s") % {
+                "mission_code": mission.mission_code,
+                "status": status
+            }
         mission.user_updated = user
         mission.date_updated = TimeUtils.now()
         mission.save(username=user.username)
-        types = {
-            "C": _("Closed"),
-            "P": _("In progess")
-        }
-        status = types.get(mission_status)
 
-        msg = _("Changed mission %(mission_code)s status to %(status)s") % {
-            "mission_code": mission.mission_code,
-            "status": status
-        }
         mission_activity = MissionActivityHistory(
             mission=mission,
             action=msg,
