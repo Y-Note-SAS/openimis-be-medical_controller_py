@@ -31,6 +31,8 @@ class CreateMissionInputType(OpenIMISMutation.Input):
 
     end_date = graphene.Date(required=True)
 
+    mission_date = graphene.Date(required=True)
+
     status = graphene.String(required=False)
 
 
@@ -118,6 +120,7 @@ class CreateMissionMutation(OpenIMISMutation):
             district=district,
             start_date=data["start_date"],
             end_date=data["end_date"],
+            mission_date=data["mission_date"],
             status=MedicalControlMission.STATUS_IN_PROGRESS,
             user=user
         )

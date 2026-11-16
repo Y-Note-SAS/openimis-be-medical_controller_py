@@ -60,6 +60,7 @@ class CreateMissionMutationTest(TestCase):
                 self.hf2.id,
             ],
             start_date=date(2026, 1, 1),
+            mission_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
         )
 
@@ -85,6 +86,7 @@ class CreateMissionMutationTest(TestCase):
                 district_id=self.district.id,
                 health_facility_ids=[],
                 start_date=date(2026, 1, 1),
+                mission_date=date(2026, 1, 1),
                 end_date=date(2026, 1, 31),
             )
 
@@ -98,6 +100,7 @@ class CreateMissionMutationTest(TestCase):
                 district_id=self.district.id,
                 health_facility_ids=[self.hf1.id],
                 start_date=date(2026, 1, 31),
+                mission_date=date(2026, 1, 1),
                 end_date=date(2026, 1, 31),
             )
 
@@ -113,6 +116,7 @@ class CreateMissionMutationTest(TestCase):
             ],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
+            mission_date=date(2026, 1, 1),
         )
 
         self.assertEqual(
@@ -131,6 +135,7 @@ class CreateMissionMutationTest(TestCase):
                 health_facility_ids=[self.hf1.id],
                 start_date=date(2026, 1, 1),
                 end_date=date(2026, 1, 31),
+                mission_date=date(2026, 1, 1),
             )
 
     def test_first_mission_code_is_generated(self):
@@ -142,6 +147,7 @@ class CreateMissionMutationTest(TestCase):
             health_facility_ids=[self.hf1.id],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
+            mission_date=date(2026, 1, 1),
         )
 
         mission = MedicalControlMission.objects.get()
@@ -160,6 +166,7 @@ class CreateMissionMutationTest(TestCase):
             health_facility_ids=[self.hf1.id],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
+            mission_date=date(2026, 1, 1),
         )
 
         CreateMissionMutation.async_mutate(
@@ -169,6 +176,7 @@ class CreateMissionMutationTest(TestCase):
             health_facility_ids=[self.hf2.id],
             start_date=date(2026, 2, 1),
             end_date=date(2026, 2, 28),
+            mission_date=date(2026, 1, 1),
         )
 
         mission = (
@@ -195,6 +203,7 @@ class CreateMissionMutationTest(TestCase):
             health_facility_ids=[self.hf1.id],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
+            mission_date=date(2026, 1, 1),
         )
 
         self.assertEqual(
@@ -211,6 +220,7 @@ class CreateMissionMutationTest(TestCase):
             health_facility_ids=[self.hf1.id],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
+            mission_date=date(2026, 1, 1),
         )
 
         mission = MedicalControlMission.objects.get()
@@ -264,6 +274,7 @@ class CreateMissionMutationTest(TestCase):
             health_facility_ids=[self.hf1.id],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
+            mission_date=date(2026, 1, 1),
         )
 
         mission = MedicalControlMission.objects.get()
@@ -290,6 +301,7 @@ class CreateMissionMutationTest(TestCase):
             health_facility_ids=[self.hf1.id],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
+            mission_date=date(2026, 1, 1),
         )
 
         mission = MedicalControlMission.objects.get()

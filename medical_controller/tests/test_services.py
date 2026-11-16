@@ -48,6 +48,7 @@ class ServicesTest(TestCase):
             ],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
+            mission_date=date(2026, 1, 1),
         )
 
         self.mission = MedicalControlMission.objects.get()
