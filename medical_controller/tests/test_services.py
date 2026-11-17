@@ -51,7 +51,7 @@ class ServicesTest(TestCase):
         CreateMissionMutation.async_mutate(
             self.user,
             region_id=self.region.id,
-            district_id=self.district.id,
+            district_id=[self.district.id],
             health_facility_ids=[
                 self.hf1.id,
                 self.hf2.id,
@@ -181,7 +181,7 @@ class ServicesTest(TestCase):
         mock_bulk_create.assert_not_called()
 
     @patch("medical_controller.services._save_selected_claims")
-    @patch("medical_controller.services._sample_claims_by_service")  # ← Nom corrigé
+    @patch("medical_controller.services._sample_claims_by_service")
     @patch("medical_controller.services._get_category_queryset")
     @patch(
         "medical_controller.services.FilteredClaimsForMission.objects.filter"
@@ -193,7 +193,6 @@ class ServicesTest(TestCase):
         mock_sample,
         mock_save,
     ):
-
         mission = self.mission
         user = self.user
 
@@ -207,47 +206,42 @@ class ServicesTest(TestCase):
         selected = ["claim1"]
         mock_sample.return_value = selected
 
-        # --- Test avec category "1" ---
-        result = process_category(
-            mission=mission,
-            category="1",
-            percentage=10,
-            health_facilities=[1],
-            user=user
-        )
+        for category in ["1", "5"]:
+            result = process_category(
+                mission=mission,
+                category=category,
+                percentage=10,
+                health_facilities=[self.hf1.id],
+                user=user
+            )
 
-        self.assertEqual(result, selected)
-        mock_get_queryset.assert_called_once_with("1", [1])
-        mock_sample.assert_called_once()
-        mock_save.assert_called_once_with(mission, selected, "1", user)
+            self.assertEqual(result, selected)
 
-        # --- Reset des mocks avant le 2ème test ---
-        mock_filter.reset_mock()
-        mock_get_queryset.reset_mock()
-        mock_sample.reset_mock()
-        mock_save.reset_mock()
+            mock_get_queryset.assert_called_with(
+                category,
+                [self.hf1.id],
+                mission
+            )
 
-        # Reconfigurer les retours après reset
-        mock_filter.return_value.values_list.return_value = [1]
-        mock_get_queryset.return_value = queryset
-        mock_sample.return_value = selected
+            mock_sample.assert_called_with(
+                remaining_queryset,
+                category,
+                10
+            )
 
-        # --- Test avec category "5" ---
-        result = process_category(
-            mission=mission,
-            category="5",
-            percentage=10,
-            health_facilities=[1],
-            user=user
-        )
+            mock_save.assert_called_with(
+                mission,
+                selected,
+                category,
+                user
+            )
 
-        self.assertEqual(result, selected)
-        mock_get_queryset.assert_called_once_with("5", [1])
-        mock_sample.assert_called_once()
-        mock_save.assert_called_once_with(mission, selected, "5", user)
+        self.assertEqual(mock_get_queryset.call_count, 2)
+        self.assertEqual(mock_sample.call_count, 2)
+        self.assertEqual(mock_save.call_count, 2)
 
     @patch("medical_controller.services._save_selected_claims")
-    @patch("medical_controller.services._sample_claims")
+    @patch("medical_controller.services._sample_claims_by_service")
     @patch("medical_controller.services._get_category_queryset")
     @patch(
         "medical_controller.services.FilteredClaimsForMission.objects.filter"
@@ -259,7 +253,6 @@ class ServicesTest(TestCase):
         mock_sample,
         mock_save,
     ):
-
         queryset = MagicMock()
         remaining_queryset = MagicMock()
 
@@ -267,18 +260,36 @@ class ServicesTest(TestCase):
         queryset.exclude.return_value = remaining_queryset
 
         mock_filter.return_value.values_list.return_value = []
-
         mock_sample.return_value = []
 
         result = process_category(
-            mission=MagicMock(),
+            mission=self.mission,
             category="99",
             percentage=10,
             health_facilities=[],
-            user=MagicMock()
+            user=self.user
         )
 
         self.assertEqual(result, [])
+
+        mock_get_queryset.assert_called_once_with(
+            "99",
+            [],
+            self.mission
+        )
+
+        mock_sample.assert_called_once_with(
+            remaining_queryset,
+            "99",
+            10
+        )
+
+        mock_save.assert_called_once_with(
+            self.mission,
+            [],
+            "99",
+            self.user
+        )
 
 
 class FakeQuerySet:
@@ -505,21 +516,19 @@ def test_empty_service_group_is_ignored(monkeypatch):
     ],
 )
 def test_sample_claims_percentage(percentage, expected):
-    """Test claims with percentage"""
     claims = list(range(100))
 
     queryset = make_fake_queryset({
         "PCS40": claims,
     })
 
-    # Test de la fonction de sélection classique.
     with patch(
-        "services.Claim.objects.filter",
+        "medical_controller.services.Claim.objects.filter",
         return_value="selected_claims",
     ) as mock_filter:
 
         with patch(
-            "services.random.sample",
+            "medical_controller.services.random.sample",
             side_effect=lambda population, size: list(population)[:size],
         ):
             result = _sample_claims(
@@ -527,8 +536,71 @@ def test_sample_claims_percentage(percentage, expected):
                 percentage,
             )
 
+    if percentage == 0:
+        assert result == []
+        mock_filter.assert_not_called()
+    else:
+        assert result == "selected_claims"
+
+        selected_ids = mock_filter.call_args.kwargs["id__in"]
+        assert len(selected_ids) == expected
+
+
+def test_category_5_selects_10_percent_per_service(
+    monkeypatch,
+):
+    expected_groups = [
+        "NW", "SW", "OU", "ES", "AD",
+        "EN", "NO", "LT", "CE", "SU",
+        "FCS17", "FCS13",
+    ]
+
+    claims_by_service = {
+        code: list(range(index * 100, (index + 1) * 100))
+        for index, code in enumerate(expected_groups)
+    }
+
+    queryset = make_fake_queryset(claims_by_service)
+
+    # On remplace les Q objects par les codes pour utiliser FakeQuerySet.
+    groups = {
+        code: code
+        for code in expected_groups
+    }
+
+    monkeypatch.setattr(
+        "medical_controller.services._get_service_groups",
+        lambda category: groups,
+    )
+
+    sampled_sizes = []
+
+    def fake_sample(population, sample_size):
+        sampled_sizes.append(sample_size)
+        return list(population)[:sample_size]
+
+    monkeypatch.setattr(
+        "medical_controller.services.random.sample",
+        fake_sample,
+    )
+
+    with patch(
+        "medical_controller.services.Claim.objects.filter",
+        return_value="selected_claims",
+    ) as mock_filter:
+
+        result = _sample_claims_by_service(
+            queryset,
+            "5",
+            10,
+        )
+
     assert result == "selected_claims"
+
+    # Chaque groupe contient 100 claims.
+    # 10 % de chaque groupe = 10 claims.
+    assert sampled_sizes == [10] * 12
 
     selected_ids = mock_filter.call_args.kwargs["id__in"]
 
-    assert len(selected_ids) == expected
+    assert len(selected_ids) == 120

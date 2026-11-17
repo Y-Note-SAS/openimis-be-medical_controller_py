@@ -19,6 +19,8 @@ from .gql_queries import (
     FilteredClaimsForMissionGQLType,
     MissionActivityHistoryGQLType,
     MissionGQLType,
+    MissionDistrictGQLType,
+    MissionUserGQLType
 )
 from .models import (
     FilteredClaimsForMission,
@@ -82,6 +84,16 @@ class Query(graphene.ObjectType):
 
     missions = OrderedDjangoFilterConnectionField(
         MissionGQLType,
+        orderBy=graphene.List(of_type=graphene.String),
+    )
+
+    missions_users = OrderedDjangoFilterConnectionField(
+        MissionUserGQLType,
+        orderBy=graphene.List(of_type=graphene.String),
+    )
+
+    missions_districts = OrderedDjangoFilterConnectionField(
+        MissionDistrictGQLType,
         orderBy=graphene.List(of_type=graphene.String),
     )
 

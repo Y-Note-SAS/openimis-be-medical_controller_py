@@ -1,17 +1,16 @@
+import datetime
+import re
+from collections import defaultdict
 from django.db import models
 
 from core import models as core_models
 from location.models import Location
 from location.models import HealthFacility
-from core.models import User
+from core.models import User, InteractiveUser
 from claim.models import Claim, ClaimService, ClaimServiceService, ClaimServiceItem
 from django.utils import timezone as django_tz
-import datetime
 from program.models import Program
 from django.db.models import Q
-from collections import defaultdict
-import re
-from django.utils import timezone
 
 
 class MedicalControlMission(core_models.HistoryModel):
@@ -33,12 +32,6 @@ class MedicalControlMission(core_models.HistoryModel):
         Location,
         on_delete=models.DO_NOTHING,
         related_name="medical_control_missions"
-    )
-
-    district = models.ForeignKey(
-        Location,
-        on_delete=models.DO_NOTHING,
-        related_name="medical_control_district_missions"
     )
 
     start_date = models.DateField()
@@ -161,6 +154,22 @@ class MissionHealthFacility(core_models.HistoryModel):
     class Meta:
         db_table = "tblMedicalControlMissionHF"
 
+class MissionUsers(core_models.HistoryModel):
+    mission = models.ForeignKey(
+        MedicalControlMission,
+        on_delete=models.DO_NOTHING,
+        related_name="missions"
+    )
+
+    user = models.ForeignKey(
+        InteractiveUser,
+        on_delete=models.DO_NOTHING,
+        related_name="missions"
+    )
+
+    class Meta:
+        db_table = "tblMedicalControlMissionUsers"
+
 
 class MissionActivityHistory(core_models.HistoryModel):
 
@@ -192,6 +201,22 @@ class MissionActivityHistory(core_models.HistoryModel):
     class Meta:
         db_table = "tblMissionActivityHistory"
 
+
+class MissionDistricts(core_models.HistoryModel):
+    mission = models.ForeignKey(
+        MedicalControlMission,
+        on_delete=models.DO_NOTHING,
+        related_name="district_missions"
+    )
+
+    district = models.ForeignKey(
+        Location,
+        on_delete=models.DO_NOTHING,
+        related_name="missions"
+    )
+
+    class Meta:
+        db_table = "tblMedicalControlMissionDistricts"
 
 def medical_controller_claims_report_query(user, **kwargs):
     """
