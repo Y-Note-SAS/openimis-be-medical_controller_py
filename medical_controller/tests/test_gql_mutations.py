@@ -14,7 +14,8 @@ from medical_controller.models import (
     MedicalControlMission,
     MissionHealthFacility,
     MissionActivityHistory,
-    FilteredClaimsForMission
+    FilteredClaimsForMission,
+    MissionDistricts
 )
 
 
@@ -52,7 +53,7 @@ class CreateMissionMutationTest(TestCase):
         CreateMissionMutation.async_mutate(
             self.user,
             region_id=self.region.id,
-            district_id=self.district.id,
+            district_id=[self.district.id],
             health_facility_ids=[
                 self.hf1.id,
                 self.hf2.id,
@@ -83,7 +84,7 @@ class CreateMissionMutationTest(TestCase):
             CreateMissionMutation.async_mutate(
                 self.user,
                 region_id=self.region.id,
-                district_id=self.district.id,
+                district_id=[self.district.id],
                 health_facility_ids=[],
                 start_date=date(2026, 1, 1),
                 mission_date=date(2026, 1, 1),
@@ -97,7 +98,7 @@ class CreateMissionMutationTest(TestCase):
             CreateMissionMutation.async_mutate(
                 self.user,
                 region_id=self.region.id,
-                district_id=self.district.id,
+                district_id=[self.district.id],
                 health_facility_ids=[self.hf1.id],
                 start_date=date(2026, 1, 31),
                 mission_date=date(2026, 1, 1),
@@ -109,7 +110,7 @@ class CreateMissionMutationTest(TestCase):
         CreateMissionMutation.async_mutate(
             self.user,
             region_id=self.region.id,
-            district_id=self.district.id,
+            district_id=[self.district.id],
             health_facility_ids=[
                 self.hf1.id,
                 self.hf2.id,
@@ -130,7 +131,7 @@ class CreateMissionMutationTest(TestCase):
             CreateMissionMutation.async_mutate(
                 AnonymousUser(),
                 region_id=self.region.id,
-                district_id=self.district.id,
+                district_id=[self.district.id],
                 health_facility_ids=[self.hf1.id],
                 start_date=date(2026, 1, 1),
                 end_date=date(2026, 1, 31),
@@ -142,7 +143,7 @@ class CreateMissionMutationTest(TestCase):
         CreateMissionMutation.async_mutate(
             self.user,
             region_id=self.region.id,
-            district_id=self.district.id,
+            district_id=[self.district.id],
             health_facility_ids=[self.hf1.id],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
@@ -163,7 +164,7 @@ class CreateMissionMutationTest(TestCase):
         CreateMissionMutation.async_mutate(
             self.user,
             region_id=self.region.id,
-            district_id=self.district.id,
+            district_id=[self.district.id],
             health_facility_ids=[self.hf1.id],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
@@ -173,7 +174,7 @@ class CreateMissionMutationTest(TestCase):
         CreateMissionMutation.async_mutate(
             self.user,
             region_id=self.region.id,
-            district_id=self.district.id,
+            district_id=[self.district.id],
             health_facility_ids=[self.hf2.id],
             start_date=date(2026, 2, 1),
             end_date=date(2026, 2, 28),
@@ -200,7 +201,7 @@ class CreateMissionMutationTest(TestCase):
         CreateMissionMutation.async_mutate(
             self.user,
             region_id=self.region.id,
-            district_id=self.district.id,
+            district_id=[self.district.id],
             health_facility_ids=[self.hf1.id],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
@@ -216,7 +217,7 @@ class CreateMissionMutationTest(TestCase):
         CreateMissionMutation.async_mutate(
             self.user,
             region_id=self.region.id,
-            district_id=self.district.id,
+            district_id=[self.district.id],
             health_facility_ids=[self.hf1.id],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
@@ -272,7 +273,7 @@ class CreateMissionMutationTest(TestCase):
         CreateMissionMutation.async_mutate(
             self.user,
             region_id=self.region.id,
-            district_id=self.district.id,
+            district_id=[self.district.id],
             health_facility_ids=[self.hf1.id],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
@@ -301,7 +302,7 @@ class CreateMissionMutationTest(TestCase):
         CreateMissionMutation.async_mutate(
             self.user,
             region_id=self.region.id,
-            district_id=self.district.id,
+            district_id=[self.district.id],
             health_facility_ids=[self.hf1.id],
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
@@ -332,3 +333,73 @@ class CreateMissionMutationTest(TestCase):
             status="C"
         )
         self.assertEqual(res[0]["message"], "mutation.all_claims_not_audited")
+
+    def test_districts_are_created(self):
+        CreateMissionMutation.async_mutate(
+            self.user,
+            region_id=self.region.id,
+            district_ids=[self.district.id],
+            health_facility_ids=[self.hf1.id],
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+            mission_date=date(2026, 1, 1),
+        )
+
+        mission = MedicalControlMission.objects.order_by(
+            "-date_created"
+        ).first()
+
+        self.assertEqual(
+            MissionDistricts.objects.filter(mission=mission).count(),
+            1
+        )
+
+    def test_only_mission_chief_can_close_mission(self):
+        CreateMissionMutation.async_mutate(
+            self.user,
+            region_id=self.region.id,
+            district_ids=[self.district.id],
+            health_facility_ids=[self.hf1.id],
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+            mission_date=date(2026, 1, 1),
+        )
+
+        mission = MedicalControlMission.objects.order_by(
+            "-date_created"
+        ).first()
+
+        another_user = create_test_interactive_user()
+
+        with self.assertRaises(ValidationError):
+            UpdateMissionMutation.async_mutate(
+                another_user,
+                mission_code=mission.mission_code,
+                status="C"
+            )
+
+    def test_update_mission_can_close_when_all_claims_are_audited(self):
+        CreateMissionMutation.async_mutate(
+            self.user,
+            region_id=self.region.id,
+            district_ids=[self.district.id],
+            health_facility_ids=[self.hf1.id],
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+            mission_date=date(2026, 1, 1),
+        )
+
+        mission = MedicalControlMission.objects.order_by(
+            "-date_created"
+        ).first()
+
+        result = UpdateMissionMutation.async_mutate(
+            self.user,
+            mission_code=mission.mission_code,
+            status="C"
+        )
+
+        mission.refresh_from_db()
+
+        self.assertEqual(mission.status, "C")
+        self.assertIsNone(result)

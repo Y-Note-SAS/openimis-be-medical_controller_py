@@ -236,6 +236,13 @@ class UpdateMissionMutation(OpenIMISMutation):
                 mission_code=mission_code
             )
         )
+
+        if mission_status == "C":
+            if user.id != mission.user_created.id:
+                raise ValidationError(
+                    _("mutation.only_mission_chief_can_close_mission")
+                )
+
         user_ids = data.get("user_ids", [])
         MissionUsers.objects.filter(mission=mission).delete()
         MissionUsers.objects.bulk_create([
@@ -254,10 +261,6 @@ class UpdateMissionMutation(OpenIMISMutation):
         }
 
         if mission_status == "C":
-            if user.id != mission.user_created.id:
-                raise ValidationError(
-                    _("mutation.only_mission_chief_can_close_mission")
-                )
             claims_for_mission = FilteredClaimsForMission.objects.filter(
                 mission=mission
             ).all()
