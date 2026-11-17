@@ -7,7 +7,7 @@ import django.utils.timezone
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('medical_controller', '0003_missionactivityhistory_and_more'),
+        ('medical_controller', '0004_historicalmedicalcontrolmission_percentage_five_and_more'),
     ]
 
     operations = [
