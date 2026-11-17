@@ -38,7 +38,6 @@ class GenerateMissionCodeTest(TestCase):
         mission = MedicalControlMission(
             mission_code="200001",
             region=self.region,
-            district=self.region,
             start_date="2026-01-01",
             end_date="2026-01-31",
             mission_date=datetime(2026, 1, 1, 0, 0),
@@ -63,7 +62,6 @@ class GenerateMissionCodeTest(TestCase):
         mission = MedicalControlMission(
             mission_code="200001",
             region=self.region,
-            district=self.region,
             start_date="2026-01-01",
             end_date="2026-01-31",
             mission_date=datetime(2026, 1, 1, 0, 0),
