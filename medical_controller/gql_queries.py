@@ -9,7 +9,8 @@ from .models import (
     MissionHealthFacility,
     FilteredClaimsForMission,
     MissionActivityHistory,
-    MissionUsers
+    MissionUsers,
+    MissionDistricts
 )
 
 
@@ -27,7 +28,6 @@ class MissionGQLType(DjangoObjectType):
             "start_date": ["exact", "lt", "lte", "gt", "gte"],
             "end_date": ["exact", "lt", "lte", "gt", "gte"],
             **prefix_filterset("region__", LocationGQLType._meta.filter_fields),
-            **prefix_filterset("district__", LocationGQLType._meta.filter_fields),
             **prefix_filterset("user__", UserGQLType._meta.filter_fields),
         }
         connection_class = ExtendedConnection
@@ -59,6 +59,21 @@ class MissionUserGQLType(DjangoObjectType):
             "id": ["exact"],
             **prefix_filterset("mission__", MissionGQLType._meta.filter_fields),
             **prefix_filterset("user__", InteractiveUserGQLType._meta.filter_fields),
+        }
+        connection_class = ExtendedConnection
+
+
+class MissionDistrictGQLType(DjangoObjectType):
+
+    client_mutation_id = graphene.String()
+
+    class Meta:
+        model = MissionDistricts
+        interfaces = (graphene.relay.Node,)
+        filter_fields = {
+            "id": ["exact"],
+            **prefix_filterset("mission__", MissionGQLType._meta.filter_fields),
+            **prefix_filterset("district__", LocationGQLType._meta.filter_fields),
         }
         connection_class = ExtendedConnection
 

@@ -1,27 +1,27 @@
+import uuid
 import graphene
+from core import TimeUtils
 from core.schema import OpenIMISMutation
 from django.contrib.auth.models import AnonymousUser
+from django.utils.translation import gettext as _
 from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied
 from location.models import Location
 from .models import (
     MedicalControlMission,
     MissionHealthFacility,
     MissionActivityHistory,
     FilteredClaimsForMission,
-    MissionUsers
+    MissionUsers,
+    MissionDistricts
 )
-from django.utils.translation import gettext as _
+
 from .apps import MedicalControllerConfig
-from django.core.exceptions import PermissionDenied
-from core import TimeUtils
-import uuid
 
 
 class CreateMissionInputType(OpenIMISMutation.Input):
 
     region_id = graphene.Int(required=True)
-
-    district_id = graphene.Int(required=True)
 
     health_facility_ids = graphene.List(
         graphene.Int,
@@ -31,6 +31,11 @@ class CreateMissionInputType(OpenIMISMutation.Input):
     user_ids = graphene.List(
         graphene.Int,
         required=False
+    )
+
+    district_ids = graphene.List(
+        graphene.Int,
+        required=True
     )
 
     start_date = graphene.Date(required=True)
@@ -108,10 +113,6 @@ class CreateMissionMutation(OpenIMISMutation):
             pk=data["region_id"]
         )
 
-        district = Location.objects.get(
-            pk=data["district_id"]
-        )
-
         hf_ids = data["health_facility_ids"]
 
         user_ids = data.get("user_ids", [])
@@ -129,7 +130,6 @@ class CreateMissionMutation(OpenIMISMutation):
         mission = MedicalControlMission(
             mission_code=generate_mission_code(region),
             region=region,
-            district=district,
             start_date=data["start_date"],
             end_date=data["end_date"],
             mission_date=data["mission_date"],
@@ -160,6 +160,19 @@ class CreateMissionMutation(OpenIMISMutation):
                 )
                 for user_id in user_ids
             ])
+
+        district_ids = data.get("district_ids", [])
+
+        MissionDistricts.objects.bulk_create([
+            MissionDistricts(
+                id=uuid.uuid4(),
+                mission=mission,
+                user_created=user,
+                user_updated=user,
+                district_id=district_id
+            )
+            for district_id in district_ids
+        ])
 
         msg = _("Created mission %(mission_code)s") % {
             "mission_code": mission.mission_code,
@@ -241,6 +254,10 @@ class UpdateMissionMutation(OpenIMISMutation):
         }
 
         if mission_status == "C":
+            if user.id != mission.user_created.id:
+                raise ValidationError(
+                    _("mutation.only_mission_chief_can_close_mission")
+                )
             claims_for_mission = FilteredClaimsForMission.objects.filter(
                 mission=mission
             ).all()

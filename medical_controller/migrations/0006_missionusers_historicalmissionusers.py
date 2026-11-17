@@ -13,8 +13,6 @@ import simple_history.models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0029_alter_mutationlog_client_mutation_id'),
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('medical_controller', '0005_remove_historicalmedicalcontrolmission_percentage_five_and_more'),
     ]
 

@@ -34,12 +34,6 @@ class MedicalControlMission(core_models.HistoryModel):
         related_name="medical_control_missions"
     )
 
-    district = models.ForeignKey(
-        Location,
-        on_delete=models.DO_NOTHING,
-        related_name="medical_control_district_missions"
-    )
-
     start_date = models.DateField()
 
     end_date = models.DateField()
@@ -207,6 +201,22 @@ class MissionActivityHistory(core_models.HistoryModel):
     class Meta:
         db_table = "tblMissionActivityHistory"
 
+
+class MissionDistricts(core_models.HistoryModel):
+    mission = models.ForeignKey(
+        MedicalControlMission,
+        on_delete=models.DO_NOTHING,
+        related_name="district_missions"
+    )
+
+    district = models.ForeignKey(
+        Location,
+        on_delete=models.DO_NOTHING,
+        related_name="missions"
+    )
+
+    class Meta:
+        db_table = "tblMedicalControlMissionDistricts"
 
 def medical_controller_claims_report_query(user, **kwargs):
     """
