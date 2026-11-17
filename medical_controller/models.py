@@ -91,6 +91,13 @@ class MedicalControlMission(core_models.HistoryModel):
         db_column='PercentageFour'
     )
 
+    percentage_five = models.CharField(
+        max_length=3,
+        blank=True,
+        null=True,
+        db_column='PercentageFive'
+    )
+
     class Meta:
         db_table = "tblMedicalControlMission"
 
@@ -325,7 +332,7 @@ def medical_controller_claims_report_query(user, **kwargs):
                 invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["qty"]['all'] += claimServiceElmt.qty_provided
                 if cclaim.audited:
                     invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["qtyAudit"]['all'] += claimServiceElmt.qty_provided
-                    invoiceElemtTotal[claimServiceElmt.service.packagetype+"QtyTotalAuditedV"] += int(claimServiceElmt.qty_provided)
+                    invoiceElemtTotal[claimServiceElmt.service.packagetype + "QtyTotalAuditedV"] += int(claimServiceElmt.qty_provided)
                     # invoiceElemtTotal["QtyTotalAuditedV"] += int(claimServiceElmt.qty_provided)
                 ## Specific Rules for Montant Recue (for different type of package)
                 if claimServiceElmt.service.packagetype == "S":
