@@ -19,6 +19,8 @@ from .gql_queries import (
     FilteredClaimsForMissionGQLType,
     MissionActivityHistoryGQLType,
     MissionGQLType,
+    MissionDistrictGQLType,
+    MissionUserGQLType
 )
 from .models import (
     FilteredClaimsForMission,
@@ -34,11 +36,13 @@ class ClaimsForHealthFacilitiesResultGQLType(graphene.ObjectType):
     total_categ2 = graphene.String()
     total_categ3 = graphene.String()
     total_categ4 = graphene.String()
+    total_categ5 = graphene.String()
 
     percentage_categ1 = graphene.String()
     percentage_categ2 = graphene.String()
     percentage_categ3 = graphene.String()
     percentage_categ4 = graphene.String()
+    percentage_categ5 = graphene.String()
 
     claims = OrderedDjangoFilterConnectionField(
         FilteredClaimsForMissionGQLType
@@ -72,11 +76,24 @@ class ClaimSampleResultGQLType(graphene.ObjectType):
         ClaimSampleCategoryGQLType
     )
 
+    category_five = graphene.Field(
+        ClaimSampleCategoryGQLType
+    )
 
 class Query(graphene.ObjectType):
 
     missions = OrderedDjangoFilterConnectionField(
         MissionGQLType,
+        orderBy=graphene.List(of_type=graphene.String),
+    )
+
+    missions_users = OrderedDjangoFilterConnectionField(
+        MissionUserGQLType,
+        orderBy=graphene.List(of_type=graphene.String),
+    )
+
+    missions_districts = OrderedDjangoFilterConnectionField(
+        MissionDistrictGQLType,
         orderBy=graphene.List(of_type=graphene.String),
     )
 
@@ -118,6 +135,9 @@ class Query(graphene.ObjectType):
             required=True
         ),
         percentage_categ_four=graphene.String(
+            required=True
+        ),
+        percentage_categ_five=graphene.String(
             required=True
         ),
         mission_code=graphene.String(
@@ -165,6 +185,10 @@ class Query(graphene.ObjectType):
             claim__health_facility__id__in=health_facilities,
             mission=mission
         )
+        all_audited = True
+        for mission_claim in base_query:
+            if not mission_claim.claim.audited:
+                all_audited = False
         category = kwargs.get("category", None)
         if category:
             base_query = base_query.filter(claim_category=category)
@@ -173,11 +197,6 @@ class Query(graphene.ObjectType):
 
         query = FilteredClaimsForMission.objects.filter(id__in=ids)
         claims = query
-
-        all_audited = True
-        for mission_claim in claims:
-            if not mission_claim.claim.audited:
-                all_audited = False
 
         return ClaimsForHealthFacilitiesResultGQLType(
 
@@ -201,6 +220,11 @@ class Query(graphene.ObjectType):
                 claim_category="4",
             ).count(),
 
+            total_categ5=FilteredClaimsForMission.objects.filter(
+                mission=mission,
+                claim_category="5",
+            ).count(),
+
             percentage_categ1=mission.percentage_one,
 
             percentage_categ2=mission.percentage_two,
@@ -208,6 +232,8 @@ class Query(graphene.ObjectType):
             percentage_categ3=mission.percentage_three,
 
             percentage_categ4=mission.percentage_four,
+
+            percentage_categ5=mission.percentage_five,
 
             claims=claims,
 
@@ -300,6 +326,12 @@ class Query(graphene.ObjectType):
             )
         )
 
+        percentage_categ_five = int(
+            kwargs.get(
+                "percentage_categ_five"
+            )
+        )
+
         category_one_claims = process_category(
             mission=mission,
             category="1",
@@ -307,7 +339,6 @@ class Query(graphene.ObjectType):
             health_facilities=health_facilities,
             user=info.context.user
         )
-        print("category_one_claims ", category_one_claims)
 
         category_two_claims = process_category(
             mission=mission,
@@ -316,7 +347,6 @@ class Query(graphene.ObjectType):
             health_facilities=health_facilities,
             user=info.context.user
         )
-        print("category_two_claims ", category_two_claims)
 
         category_three_claims = process_category(
             mission=mission,
@@ -325,7 +355,6 @@ class Query(graphene.ObjectType):
             health_facilities=health_facilities,
             user=info.context.user
         )
-        print("category_three_claims ", category_three_claims)
 
         category_four_claims = process_category(
             mission=mission,
@@ -334,7 +363,14 @@ class Query(graphene.ObjectType):
             health_facilities=health_facilities,
             user=info.context.user
         )
-        print("category_four_claims ", category_four_claims)
+
+        category_five_claims = process_category(
+            mission=mission,
+            category="5",
+            percentage=percentage_categ_five,
+            health_facilities=health_facilities,
+            user=info.context.user
+        )
 
         msg = _("Added filter %(kwargs)s on mission %(mission_code)s") % {
             "kwargs": str(kwargs),
@@ -353,6 +389,7 @@ class Query(graphene.ObjectType):
         mission.percentage_two = str(percentage_categ_two)
         mission.percentage_three = str(percentage_categ_three)
         mission.percentage_four = str(percentage_categ_four)
+        mission.percentage_five = str(percentage_categ_five)
         if mission.is_dirty(check_relationship=True):
             mission.save(username=info.context.user.username)
 
@@ -380,6 +417,12 @@ class Query(graphene.ObjectType):
                 total_category=build_category_result(mission, "4"),
                 claims=category_four_claims,
                 percentage=percentage_categ_four
+            ),
+            category_five=ClaimSampleCategoryGQLType(
+                category="5",
+                total_category=build_category_result(mission, "5"),
+                claims=category_five_claims,
+                percentage=percentage_categ_five
             )
         )
 
