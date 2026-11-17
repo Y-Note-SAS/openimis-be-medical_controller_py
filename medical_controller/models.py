@@ -158,7 +158,7 @@ class MissionUsers(core_models.HistoryModel):
     mission = models.ForeignKey(
         MedicalControlMission,
         on_delete=models.DO_NOTHING,
-        related_name="missions"
+        related_name="users"
     )
 
     user = models.ForeignKey(

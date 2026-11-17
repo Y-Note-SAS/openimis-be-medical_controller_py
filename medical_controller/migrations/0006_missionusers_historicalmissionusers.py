@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 ('date_created', core.fields.DateTimeField(db_column='DateCreated', default=datetime.datetime.now, null=True)),
                 ('date_updated', core.fields.DateTimeField(db_column='DateUpdated', default=datetime.datetime.now, null=True)),
                 ('version', models.IntegerField(default=1)),
-                ('mission', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='missions', to='medical_controller.medicalcontrolmission')),
+                ('mission', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='users', to='medical_controller.medicalcontrolmission')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='missions', to='core.interactiveuser')),
                 ('user_created', models.ForeignKey(db_column='UserCreatedUUID', on_delete=django.db.models.deletion.DO_NOTHING, related_name='%(class)s_user_created', to=settings.AUTH_USER_MODEL)),
                 ('user_updated', models.ForeignKey(db_column='UserUpdatedUUID', on_delete=django.db.models.deletion.DO_NOTHING, related_name='%(class)s_user_updated', to=settings.AUTH_USER_MODEL)),
