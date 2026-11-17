@@ -206,7 +206,7 @@ class MissionDistricts(core_models.HistoryModel):
     mission = models.ForeignKey(
         MedicalControlMission,
         on_delete=models.DO_NOTHING,
-        related_name="district_missions"
+        related_name="districts"
     )
 
     district = models.ForeignKey(
