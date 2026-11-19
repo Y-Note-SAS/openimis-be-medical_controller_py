@@ -2,13 +2,15 @@ from datetime import date
 import uuid
 from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.contrib.auth.models import AnonymousUser
 from location.test_helpers import create_test_health_facility, create_test_location
 from core.test_helpers import create_test_interactive_user
 from claim.test_helpers import create_test_claim
 from location.models import Location
 from medical_controller.gql_mutations import (
     CreateMissionMutation,
-    UpdateMissionMutation
+    UpdateMissionMutation,
+    TreatClaimsMutation
 )
 from medical_controller.models import (
     MedicalControlMission,
@@ -46,6 +48,33 @@ class CreateMissionMutationTest(TestCase):
         self.hf2 = create_test_health_facility(
             code="HF2",
             location_id=location.id
+        )
+
+        # Créer des claims pour les tests
+        self.claim_adoptable = create_test_claim(
+            custom_props={
+                "status": 2
+            }
+        )
+        self.claim2 = create_test_claim(
+            custom_props={
+                "status": 2
+            }
+        )
+        self.claim_rejected = create_test_claim(
+            custom_props={
+                "status": 1
+            }
+        )
+        self.claim3 = create_test_claim(
+            custom_props={
+                "status": 1
+            }
+        )
+        self.claim_non_rejected = create_test_claim(
+            custom_props={
+                "status": 2
+            }
         )
 
     def test_create_mission(self):
@@ -125,7 +154,6 @@ class CreateMissionMutationTest(TestCase):
         )
 
     def test_create_mission_requires_authenticated_user(self):
-        from django.contrib.auth.models import AnonymousUser
 
         with self.assertRaises(ValidationError):
             CreateMissionMutation.async_mutate(
@@ -258,8 +286,6 @@ class CreateMissionMutationTest(TestCase):
             )
 
     def test_update_requires_authenticated_user(self):
-
-        from django.contrib.auth.models import AnonymousUser
 
         with self.assertRaises(ValidationError):
             UpdateMissionMutation.async_mutate(
@@ -403,3 +429,153 @@ class CreateMissionMutationTest(TestCase):
 
         self.assertEqual(mission.status, "C")
         self.assertIsNone(result)
+
+#     import uuid
+# from datetime import date
+# from django.test import TestCase
+# from django.contrib.auth.models import AnonymousUser
+# from claim.models import Claim
+# from medical_controller.models import MedicalControlMission
+# from medical_controller.gql_mutations import TreatClaimsMutation
+# from medical_controller.apps import MedicalControllerConfig
+# from core.models import User  # ou l'import approprié pour User
+
+# class TreatClaimsMutationTest(TestCase):
+    # ─── Tests d'authentification ───
+
+    def test_anonymous_user_raises_error(self):
+        with self.assertRaises(ValidationError) as ctx:
+            TreatClaimsMutation.async_mutate(
+                AnonymousUser(),
+                action="adopt",
+                claim_ids=[self.claim_adoptable.id]
+            )
+        self.assertIn("authentication_required", str(ctx.exception))
+
+    def test_none_user_raises_error(self):
+        with self.assertRaises(ValidationError) as ctx:
+            TreatClaimsMutation.async_mutate(
+                None,
+                action="adopt",
+                claim_ids=[self.claim_adoptable.id]
+            )
+        self.assertIn("authentication_required", str(ctx.exception))
+
+    # ─── Tests action manquante/invalide ───
+
+    def test_no_action_raises_error(self):
+        with self.assertRaises(ValidationError) as ctx:
+            TreatClaimsMutation.async_mutate(
+                self.user,
+                claim_ids=[self.claim_adoptable.id]
+            )
+        self.assertIn("no_action_sent_for_treat_claims", str(ctx.exception))
+
+    def test_empty_action_raises_error(self):
+        with self.assertRaises(ValidationError) as ctx:
+            TreatClaimsMutation.async_mutate(
+                self.user,
+                action="",
+                claim_ids=[self.claim_adoptable.id]
+            )
+        self.assertIn("no_action_sent_for_treat_claims", str(ctx.exception))
+
+    def test_invalid_action_raises_error(self):
+        with self.assertRaises(ValidationError) as ctx:
+            TreatClaimsMutation.async_mutate(
+                self.user,
+                action="delete",
+                claim_ids=[self.claim_adoptable.id]
+            )
+        self.assertIn("action_must_be_adopt_or_rehabilitate", str(ctx.exception))
+
+    # ─── Tests claim_ids manquant ───
+
+    def test_no_claim_ids_raises_error(self):
+        with self.assertRaises(ValidationError) as ctx:
+            TreatClaimsMutation.async_mutate(
+                self.user,
+                action="adopt"
+            )
+        self.assertIn("no_claim_ids_sent_for_treat_claims", str(ctx.exception))
+
+    def test_empty_claim_ids_raises_error(self):
+        with self.assertRaises(ValidationError) as ctx:
+            TreatClaimsMutation.async_mutate(
+                self.user,
+                action="adopt",
+                claim_ids=[]
+            )
+        self.assertIn("no_claim_ids_sent_for_treat_claims", str(ctx.exception))
+
+    # ─── Tests action "adopt" ───
+
+    def test_adopt_sets_audit_status_to_A(self):
+        result = TreatClaimsMutation.async_mutate(
+            self.user,
+            action="adopt",
+            claim_ids=[self.claim_adoptable.id]
+        )
+        self.claim_adoptable.refresh_from_db()
+        self.assertEqual(self.claim_adoptable.audit_status, 'A')
+        self.assertIsNone(result)
+
+    def test_adopt_on_multiple_claims(self):
+        result = TreatClaimsMutation.async_mutate(
+            self.user,
+            action="adopt",
+            claim_ids=[self.claim_adoptable.id, self.claim2.id]
+        )
+        self.claim_adoptable.refresh_from_db()
+        self.claim2.refresh_from_db()
+        self.assertEqual(self.claim_adoptable.audit_status, 'A')
+        self.assertEqual(self.claim2.audit_status, 'A')
+        self.assertIsNone(result)
+
+    # ─── Tests action "rehabilitate" ───
+
+    def test_rehabilitate_on_rejected_claim_sets_audit_status_to_H(self):
+        result = TreatClaimsMutation.async_mutate(
+            self.user,
+            action="rehabilitate",
+            claim_ids=[self.claim_rejected.id]
+        )
+        self.claim_rejected.refresh_from_db()
+        self.assertEqual(self.claim_rejected.audit_status, 'H')
+        self.assertIsNone(result)
+
+    def test_rehabilitate_on_multiple_rejected_claims_succeeds(self):
+        result = TreatClaimsMutation.async_mutate(
+            self.user,
+            action="rehabilitate",
+            claim_ids=[self.claim_rejected.id, self.claim3.id]
+        )
+        self.claim_rejected.refresh_from_db()
+        self.claim3.refresh_from_db()
+        self.assertEqual(self.claim_rejected.audit_status, 'H')
+        self.assertEqual(self.claim3.audit_status, 'H')
+        self.assertIsNone(result)
+
+    def test_rehabilitate_on_non_rejected_claim_raises_error(self):
+        with self.assertRaises(ValidationError) as ctx:
+            TreatClaimsMutation.async_mutate(
+                self.user,
+                action="rehabilitate",
+                claim_ids=[self.claim_non_rejected.id]
+            )
+        self.assertIn("Cannot rehabilitate", str(ctx.exception))
+        self.assertIn(self.claim_non_rejected.code, str(ctx.exception))
+
+    def test_rehabilitate_mixed_rejected_and_non_rejected_raises_error(self):
+        with self.assertRaises(ValidationError) as ctx:
+            TreatClaimsMutation.async_mutate(
+                self.user,
+                action="rehabilitate",
+                claim_ids=[self.claim_rejected.id, self.claim_non_rejected.id]
+            )
+        self.assertIn("Cannot rehabilitate", str(ctx.exception))
+        self.assertIn(self.claim_non_rejected.code, str(ctx.exception))
+
+        # Vérifier que le claim rejected n'a PAS été modifié (atomicité)
+        self.claim_rejected.refresh_from_db()
+        self.assertNotEqual(self.claim_rejected.audit_status, 'H')
