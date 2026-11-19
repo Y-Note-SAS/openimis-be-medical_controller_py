@@ -84,7 +84,7 @@ class CreateMissionMutation(OpenIMISMutation):
 
     @classmethod
     def _validate_mutation(cls, user, **data):
-        if type(user) is AnonymousUser or not user.id:
+        if type(user) is AnonymousUser or not user or not user.id:
             raise ValidationError("mutation.authentication_required")
         if not user.has_perms(
                 MedicalControllerConfig.gql_mutation_medical_controller_perms):
@@ -96,7 +96,7 @@ class CreateMissionMutation(OpenIMISMutation):
     @classmethod
     def async_mutate(cls, user, **data):
 
-        if type(user) is AnonymousUser or not user.id:
+        if type(user) is AnonymousUser or not user or not user.id:
             raise ValidationError(
                 _("mutation.authentication_required")
             )
@@ -196,7 +196,7 @@ class UpdateMissionMutation(OpenIMISMutation):
 
     @classmethod
     def _validate_mutation(cls, user, **data):
-        if type(user) is AnonymousUser or not user.id:
+        if type(user) is AnonymousUser or not user or not user.id:
             raise ValidationError("mutation.authentication_required")
         if not user.has_perms(
                 MedicalControllerConfig.gql_mutation_medical_controller_perms):
@@ -208,7 +208,7 @@ class UpdateMissionMutation(OpenIMISMutation):
     @classmethod
     def async_mutate(cls, user, **data):
 
-        if type(user) is AnonymousUser or not user.id:
+        if type(user) is AnonymousUser or not user or not user.id:
             raise ValidationError(
                 _("mutation.authentication_required")
             )
