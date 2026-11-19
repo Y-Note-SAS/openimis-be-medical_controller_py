@@ -239,17 +239,20 @@ class TreatClaimsMutation(OpenIMISMutation):
             )
 
         if action == "adopt":
-            Claim.objects.filter(id__in=claim_ids).update(audit_status='A')
+            Claim.objects.filter(
+                id__in=claim_ids, validity_to__isnull=True).update(audit_status='A')
 
         if action == "rehabilitate":
             # Ensure all claims are in rejected status before rehabilitation
-            non_rejected = Claim.objects.filter(id__in=claim_ids).exclude(status=1)
+            non_rejected = Claim.objects.filter(
+                id__in=claim_ids, validity_to__isnull=True).exclude(status=1)
             if non_rejected.exists():
                 codes = list(non_rejected.values_list('code', flat=True))
                 raise ValidationError(
                 f"Cannot rehabilitate: the following claims are not rejected: {', '.join(codes)}"
                 )
-            Claim.objects.filter(id__in=claim_ids).update(audit_status='H')
+            Claim.objects.filter(
+                id__in=claim_ids, validity_to__isnull=True).update(audit_status='H')
 
 
 class UpdateMissionMutation(OpenIMISMutation):

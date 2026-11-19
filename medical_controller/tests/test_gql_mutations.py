@@ -430,19 +430,6 @@ class CreateMissionMutationTest(TestCase):
         self.assertEqual(mission.status, "C")
         self.assertIsNone(result)
 
-#     import uuid
-# from datetime import date
-# from django.test import TestCase
-# from django.contrib.auth.models import AnonymousUser
-# from claim.models import Claim
-# from medical_controller.models import MedicalControlMission
-# from medical_controller.gql_mutations import TreatClaimsMutation
-# from medical_controller.apps import MedicalControllerConfig
-# from core.models import User  # ou l'import approprié pour User
-
-# class TreatClaimsMutationTest(TestCase):
-    # ─── Tests d'authentification ───
-
     def test_anonymous_user_raises_error(self):
         with self.assertRaises(ValidationError) as ctx:
             TreatClaimsMutation.async_mutate(
