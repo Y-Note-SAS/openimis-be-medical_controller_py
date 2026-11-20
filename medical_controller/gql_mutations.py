@@ -2,6 +2,7 @@ import uuid
 import graphene
 from core import TimeUtils
 from core.schema import OpenIMISMutation
+from claim.models import Claim
 from django.contrib.auth.models import AnonymousUser
 from django.utils.translation import gettext as _
 from django.core.exceptions import ValidationError
@@ -52,6 +53,15 @@ class UpdateMissionInputType(OpenIMISMutation.Input):
     status = graphene.String(required=True)
     mission_code = graphene.String(required=True)
     user_ids = graphene.List(
+        graphene.Int,
+        required=False
+    )
+
+
+class TreatClaimsInBlockInputType(OpenIMISMutation.Input):
+
+    action = graphene.String(required=True)
+    claim_ids = graphene.List(
         graphene.Int,
         required=False
     )
@@ -185,6 +195,64 @@ class CreateMissionMutation(OpenIMISMutation):
             user_updated=user,
         )
         mission_activity.save(username=user.username)
+
+
+class TreatClaimsMutation(OpenIMISMutation):
+
+    _mutation_module = "medical_controller"
+
+    _mutation_class = "TreatClaimsMutation"
+    _model = MedicalControlMission
+
+    @classmethod
+    def _validate_mutation(cls, user, **data):
+        if type(user) is AnonymousUser or not user or not user.id:
+            raise ValidationError("mutation.authentication_required")
+        if not user.has_perms(
+                MedicalControllerConfig.gql_mutation_medical_controller_perms):
+            raise PermissionDenied(_("unauthorized"))
+
+    class Input(TreatClaimsInBlockInputType):
+        pass
+
+    @classmethod
+    def async_mutate(cls, user, **data):
+
+        if type(user) is AnonymousUser or not user or not user.id:
+            raise ValidationError(
+                _("mutation.authentication_required")
+            )
+
+        action = data.get("action", None)
+        claim_ids = data.get("claim_ids", [])
+        if not action:
+            raise ValidationError(
+                _("mutation.no_action_sent_for_treat_claims")
+            )
+        if not claim_ids:
+            raise ValidationError(
+                _("mutation.no_claim_ids_sent_for_treat_claims")
+            )
+        if action not in ["adopt", "rehabilitate"]:
+            raise ValidationError(
+                _("mutation.action_must_be_adopt_or_rehabilitate")
+            )
+
+        if action == "adopt":
+            Claim.objects.filter(
+                id__in=claim_ids, validity_to__isnull=True).update(audit_status='A')
+
+        if action == "rehabilitate":
+            # Ensure all claims are in rejected status before rehabilitation
+            non_rejected = Claim.objects.filter(
+                id__in=claim_ids, validity_to__isnull=True).exclude(status=1)
+            if non_rejected.exists():
+                codes = list(non_rejected.values_list('code', flat=True))
+                raise ValidationError(
+                f"Cannot rehabilitate: the following claims are not rejected: {', '.join(codes)}"
+                )
+            Claim.objects.filter(
+                id__in=claim_ids, validity_to__isnull=True).update(audit_status='H')
 
 
 class UpdateMissionMutation(OpenIMISMutation):
