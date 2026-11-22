@@ -358,11 +358,12 @@ class UpdateMissionMutation(OpenIMISMutation):
         mission.date_updated = TimeUtils.now()
         mission.save(username=user.username)
 
-        mission_activity = MissionActivityHistory(
-            mission=mission,
-            action=msg,
-            user=user,
-            user_created=user,
-            user_updated=user,
-        )
-        mission_activity.save(username=user.username)
+        if msg != "":
+            mission_activity = MissionActivityHistory(
+                mission=mission,
+                action=msg,
+                user=user,
+                user_created=user,
+                user_updated=user,
+            )
+            mission_activity.save(username=user.username)

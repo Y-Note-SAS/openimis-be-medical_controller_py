@@ -273,7 +273,7 @@ class MissionQueryTest(TestCase):
                 mission=self.mission,
                 user_created=self.user,
                 user_updated=self.user,
-                district_id=self.district,
+                district_id=self.district.id,
             )
             mission_district.save(username=self.user.username)
 
@@ -372,6 +372,8 @@ class MissionQueryTest(TestCase):
                 variables=variables,
                 context_value=self.contextquery,
             )
+
+            print("result data ", result.data)
 
             self.assertEqual(
                 len(
