@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from medical_controller.schema import Query
 from medical_controller.models import MedicalControlMission
 from core.test_helpers import create_test_interactive_user
-from location.models import Location
+from location.test_helpers import create_test_location
 
 
 class MissionQueryTest(TestCase):
@@ -19,22 +19,17 @@ class MissionQueryTest(TestCase):
         # On évite de remplacer has_perms par une lambda persistante.
         # On le mockera dans chaque test.
 
-        self.region = Location(
-            code="2",
-            name="East",
+        self.region = create_test_location(
+            loc_type="R"
         )
-        self.region.save()
 
-        self.district = Location(
-            code="21",
-            name="District",
+        self.district = create_test_location(
+            loc_type="D"
         )
-        self.district.save()
 
         self.mission = MedicalControlMission(
             mission_code="200001",
             region=self.region,
-            district=self.district,
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
             status=MedicalControlMission.STATUS_IN_PROGRESS,
