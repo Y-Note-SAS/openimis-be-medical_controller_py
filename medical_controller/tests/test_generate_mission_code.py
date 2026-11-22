@@ -39,6 +39,7 @@ class GenerateMissionCodeTest(TestCase):
             region=self.region,
             start_date="2026-01-01",
             end_date="2026-01-31",
+            mission_date="2026-01-31",
             user=self.user,
         )
         mission.save(username=self.user.username)
@@ -62,6 +63,7 @@ class GenerateMissionCodeTest(TestCase):
             region=self.region,
             start_date="2026-01-01",
             end_date="2026-01-31",
+            mission_date="2026-01-31",
             user=self.user,
         )
         mission.save(username=self.user.username)

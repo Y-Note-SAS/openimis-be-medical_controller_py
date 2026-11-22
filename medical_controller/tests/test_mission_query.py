@@ -30,6 +30,7 @@ class MissionQueryTest(TestCase):
         self.mission = MedicalControlMission(
             mission_code="200001",
             region=self.region,
+            mission_date="2026-01-31",
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
             status=MedicalControlMission.STATUS_IN_PROGRESS,
