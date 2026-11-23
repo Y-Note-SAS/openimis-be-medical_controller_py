@@ -247,9 +247,9 @@ class TreatClaimsMutation(OpenIMISMutation):
             non_rejected = Claim.objects.filter(
                 id__in=claim_ids, validity_to__isnull=True).exclude(status=1)
             if non_rejected.exists():
+                codes = list(non_rejected.values_list('code', flat=True))
                 err =\
                 f"Cannot rehabilitate: the following claims are not rejected: {', '.join(codes)}"
-                codes = list(non_rejected.values_list('code', flat=True))
                 raise ValidationError(
                     err
                 )
