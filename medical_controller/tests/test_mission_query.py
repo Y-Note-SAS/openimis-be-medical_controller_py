@@ -286,7 +286,7 @@ class MissionQueryTest(TestCase):
                                 districts {
                                     edges {
                                         node {
-                                            district {
+                                            districts {
                                                 id
                                                 name
                                             }
@@ -333,7 +333,6 @@ class MissionQueryTest(TestCase):
             query = """
                 query(
                     $region: ID!,
-                    $district: ID!,
                     $status: MedicalControlMissionStatus!,
                     $missionCode: String!
                 ) {
@@ -349,7 +348,7 @@ class MissionQueryTest(TestCase):
                                 region {
                                     code
                                 }
-                                district {
+                                districts {
                                     code
                                 }
                                 status
@@ -365,7 +364,7 @@ class MissionQueryTest(TestCase):
                     self.region.id
                 ),
                 "status": MedicalControlMission.STATUS_IN_PROGRESS,
-                "missionCode": "200001",
+                "missionCode": self.mission.mission_code,
             }
 
             schema = graphene.Schema(query=Query)
@@ -394,5 +393,5 @@ class MissionQueryTest(TestCase):
             )
             self.assertEqual(
                 result.data["missions"]["edges"][0]["node"]["missionCode"],
-                "200001",
+                self.mission.mission_code,
             )
