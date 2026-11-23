@@ -333,8 +333,8 @@ def medical_controller_claims_report_query(user, **kwargs):
             for claimServiceElmt in claimService:
                 invoiceElemtTotal[claimServiceElmt.service.packagetype + "QtyValuatedV"] = 0
                 invoiceElemtTotal[claimServiceElmt.service.packagetype + "MtnValideV"] = 0
-                if claimServiceElmt.service.id not in\
-                    invoiceElemtList[claimServiceElmt.service.packagetype]:
+                value_to_check = invoiceElemtList[claimServiceElmt.service.packagetype]
+                if claimServiceElmt.service.id not in value_to_check:
                     invoiceElemtList[claimServiceElmt.service.packagetype]\
                     [claimServiceElmt.service.id] = defaultdict(dict)
                     invoiceElemtList[claimServiceElmt.service.packagetype]\
@@ -350,14 +350,14 @@ def medical_controller_claims_report_query(user, **kwargs):
                     invoiceElemtList[claimServiceElmt.service.packagetype]\
                         [claimServiceElmt.service.id]["MontantRetabliAudit"] = 0
 
-                ## Define global information of each Line
+                # Define global information of each Line
                 invoiceElemtList[claimServiceElmt.service.packagetype]\
                     [claimServiceElmt.service.id]["name"] = claimServiceElmt.service.name
                 invoiceElemtList[claimServiceElmt.service.packagetype]\
                     [claimServiceElmt.service.id]["code"] = claimServiceElmt.service.code
                 invoiceElemtList[claimServiceElmt.service.packagetype]\
                     [claimServiceElmt.service.id]["tarif"] = claimServiceElmt.service.price
-                ## Status Valuated of Claim
+                # Status Valuated of Claim
                 if cclaim.status == 16:
                     invoiceElemtList[claimServiceElmt.service.packagetype]\
                         [claimServiceElmt.service.id]["qty"]['valuated'] += int(
@@ -377,7 +377,7 @@ def medical_controller_claims_report_query(user, **kwargs):
                     invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["qtyAudit"]['all'] += claimServiceElmt.qty_provided
                     invoiceElemtTotal[claimServiceElmt.service.packagetype + "QtyTotalAuditedV"] += int(claimServiceElmt.qty_provided)
                     # invoiceElemtTotal["QtyTotalAuditedV"] += int(claimServiceElmt.qty_provided)
-                ## Specific Rules for Montant Recue (for different type of package)
+                # Specific Rules for Montant Recue (for different type of package)
                 if claimServiceElmt.service.packagetype == "S":
                     invoiceElemtList[claimServiceElmt.service.packagetype]\
                         [claimServiceElmt.service.id]["MontantRecue"] +=\
@@ -416,7 +416,7 @@ def medical_controller_claims_report_query(user, **kwargs):
                 if claimServiceElmt.service.packagetype not in invoiceElemtTotal :
                     invoiceElemtTotal[claimServiceElmt.service.packagetype] = defaultdict(int)
 
-                ### Sum of all line at footer of table
+                # Sum of all line at footer of table
                 invoiceElemtTotal[claimServiceElmt.service.packagetype+"QtyTotalV"] += int(claimServiceElmt.qty_provided)
                 MtnNotValideV = 0
                 if int(invoiceElemtTotal[claimServiceElmt.service.packagetype+"MontantRecueTotalV"] - invoiceElemtTotal[claimServiceElmt.service.packagetype+"MtnValideV"]) > 0:
@@ -614,7 +614,7 @@ def medical_controller_claims_report_query(user, **kwargs):
                         ))
                     invoiceElemtTotal["SMontantRecueTotalV"] += v[id]['MontantRecue']
 
-        ## Calcaulating of each invoiceElemtTotal
+        # Calcaulating of each invoiceElemtTotal
         invoiceElemtTotal["NbFactureValideTotal"] = invoiceElemtTotal["FQtyValuatedV"] + invoiceElemtTotal["SQtyValuatedV"] + invoiceElemtTotal["PQtyValuatedV"]
         invoiceElemtTotal["NbFactureValideTotal"] = "{:,.0f}".format(invoiceElemtTotal["NbFactureValideTotal"])
         invoiceElemtTotal["FQtyValuated"] = "{:,.0f}".format(invoiceElemtTotal["FQtyValuatedV"])
