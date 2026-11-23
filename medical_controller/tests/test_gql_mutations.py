@@ -395,14 +395,13 @@ class CreateMissionMutationTest(TestCase):
             "-date_created"
         ).first()
 
-        another_user = create_test_interactive_user()
-
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as ctx:
             UpdateMissionMutation.async_mutate(
-                another_user,
+                AnonymousUser(),
                 mission_code=mission.mission_code,
                 status="C"
             )
+            self.assertIn("authentication_required", str(ctx.exception))
 
     def test_update_mission_can_close_when_all_claims_are_audited(self):
         CreateMissionMutation.async_mutate(

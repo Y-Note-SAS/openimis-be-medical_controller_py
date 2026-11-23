@@ -154,6 +154,7 @@ class MissionHealthFacility(core_models.HistoryModel):
     class Meta:
         db_table = "tblMedicalControlMissionHF"
 
+
 class MissionUsers(core_models.HistoryModel):
     mission = models.ForeignKey(
         MedicalControlMission,
@@ -218,6 +219,7 @@ class MissionDistricts(core_models.HistoryModel):
     class Meta:
         db_table = "tblMedicalControlMissionDistricts"
 
+
 def medical_controller_claims_report_query(user, **kwargs):
     """
     This method computes invoice for medical controller and
@@ -256,11 +258,11 @@ def medical_controller_claims_report_query(user, **kwargs):
         "dateTo": date_to_str
     }
     # If there is HealthFacility defined in the form
-    if hflocation and hflocation!="0" :
+    if hflocation and hflocation != "0":
         hflocationObj = HealthFacility.objects.filter(
             code=hflocation,
             validity_to__isnull=True
-            ).first()
+        ).first()
         dictBase["fosa"] = hflocationObj.name
         dictGeo['health_facility'] = hflocationObj.id
 
@@ -269,7 +271,7 @@ def medical_controller_claims_report_query(user, **kwargs):
     programs = Program.objects.filter(
         validityDateFrom__lte=today).filter(
         Q(validityDateTo__isnull=True) | Q(validityDateTo__gte=today)
-        ).exclude(code='DNB').order_by('-idProgram')[:5]
+    ).exclude(code='DNB').order_by('-idProgram')[:5]
 
     program_ids = []
     for prg in programs:
@@ -289,21 +291,21 @@ def medical_controller_claims_report_query(user, **kwargs):
     for program in program_ids:
         if i == 1:
             dictBase.update({
-                "prestationForfaitaire" : [],
-                "prestationPlafonnees" : [],
-                "prestationsNonMedicales" : [],
+                "prestationForfaitaire": [],
+                "prestationPlafonnees": [],
+                "prestationsNonMedicales": [],
                 "invoiceElemtTotal": [],
                 "Program1": program.nameProgram if program != 0 else " "
             })
         else:
             dictBase.update({
-                "prestationForfaitaireProgram"+str(i): [],
-                "prestationPlafonneesProgram"+str(i): [],
-                "prestationsNonMedicalesProgram"+str(i) : [],
-                "invoiceElemtTotalProgram"+str(i): [],
-                "Program"+str(i): program.nameProgram if program != 0 else " "
+                "prestationForfaitaireProgram" + str(i): [],
+                "prestationPlafonneesProgram" + str(i): [],
+                "prestationsNonMedicalesProgram" + str(i): [],
+                "invoiceElemtTotalProgram" + str(i): [],
+                "Program" + str(i): program.nameProgram if program != 0 else " "
             })
-        ## Get All claim corresponding to parameter sent
+        # Get All claim corresponding to parameter sent
         statusExcluded = [1, 2]
         value = program.idProgram if program != 0 else 0
         claimList = Claim.objects.exclude(
@@ -322,35 +324,51 @@ def medical_controller_claims_report_query(user, **kwargs):
         invoiceElemtListF = []
         invoiceElemtListS = []
 
-
         for cclaim in claimList:
-            #First we calculate on each Service inside a
+            # First we calculate on each Service inside a
             claimService = ClaimService.objects.filter(
-                claim = cclaim,
+                claim=cclaim,
                 status=1
             ).filter(validity_to__isnull=True)
             for claimServiceElmt in claimService:
-                invoiceElemtTotal[claimServiceElmt.service.packagetype+"QtyValuatedV"] = 0
-                invoiceElemtTotal[claimServiceElmt.service.packagetype+"MtnValideV"] = 0
-                if claimServiceElmt.service.id not in invoiceElemtList[claimServiceElmt.service.packagetype]:
-                    invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id] = defaultdict(dict)
-                    invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["qty"] = defaultdict(int)
-                    invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["qtyAudit"] = defaultdict(int)
-                    invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["MontantRecue"] = 0
-                    invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["MontantRecueAudit"] = 0
-                    invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["MontantRejeteAudit"] = 0
-                    invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["MontantRetabliAudit"] = 0
+                invoiceElemtTotal[claimServiceElmt.service.packagetype + "QtyValuatedV"] = 0
+                invoiceElemtTotal[claimServiceElmt.service.packagetype + "MtnValideV"] = 0
+                value_to_check = invoiceElemtList[claimServiceElmt.service.packagetype]
+                if claimServiceElmt.service.id not in value_to_check:
+                    invoiceElemtList[claimServiceElmt.service.packagetype]\
+                    [claimServiceElmt.service.id] = defaultdict(dict)
+                    invoiceElemtList[claimServiceElmt.service.packagetype]\
+                    [claimServiceElmt.service.id]["qty"] = defaultdict(int)
+                    invoiceElemtList[claimServiceElmt.service.packagetype]\
+                    [claimServiceElmt.service.id]["qtyAudit"] = defaultdict(int)
+                    invoiceElemtList[claimServiceElmt.service.packagetype]\
+                    [claimServiceElmt.service.id]["MontantRecue"] = 0
+                    invoiceElemtList[claimServiceElmt.service.packagetype]\
+                        [claimServiceElmt.service.id]["MontantRecueAudit"] = 0
+                    invoiceElemtList[claimServiceElmt.service.packagetype]\
+                        [claimServiceElmt.service.id]["MontantRejeteAudit"] = 0
+                    invoiceElemtList[claimServiceElmt.service.packagetype]\
+                        [claimServiceElmt.service.id]["MontantRetabliAudit"] = 0
 
-                ## Define global information of each Line
-                invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["name"] = claimServiceElmt.service.name
-                invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["code"] = claimServiceElmt.service.code
-                invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["tarif"] = claimServiceElmt.service.price
-                ## Status Valuated of Claim
-                if cclaim.status==16:
-                    invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["qty"]['valuated'] += int(claimServiceElmt.qty_provided)
+                # Define global information of each Line
+                invoiceElemtList[claimServiceElmt.service.packagetype]\
+                    [claimServiceElmt.service.id]["name"] = claimServiceElmt.service.name
+                invoiceElemtList[claimServiceElmt.service.packagetype]\
+                    [claimServiceElmt.service.id]["code"] = claimServiceElmt.service.code
+                invoiceElemtList[claimServiceElmt.service.packagetype]\
+                    [claimServiceElmt.service.id]["tarif"] = claimServiceElmt.service.price
+                # Status Valuated of Claim
+                if cclaim.status == 16:
+                    invoiceElemtList[claimServiceElmt.service.packagetype]\
+                        [claimServiceElmt.service.id]["qty"]['valuated'] += int(
+                            claimServiceElmt.qty_provided
+                        )
                     if claimServiceElmt.price_valuated == None :
                         claimServiceElmt.price_valuated = 0
-                    invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["qty"]['sum'] += int(claimServiceElmt.qty_provided * claimServiceElmt.price_valuated)
+                    invoiceElemtList[claimServiceElmt.service.packagetype]\
+                        [claimServiceElmt.service.id]["qty"]['sum'] += int(
+                            claimServiceElmt.qty_provided * claimServiceElmt.price_valuated
+                        )
                     invoiceElemtTotal[claimServiceElmt.service.packagetype+"QtyValuatedV"] += int(invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["qty"]['valuated'])
                     invoiceElemtTotal[claimServiceElmt.service.packagetype+"MtnValideV"] += int(invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["qty"]['sum'])
 
@@ -359,13 +377,19 @@ def medical_controller_claims_report_query(user, **kwargs):
                     invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["qtyAudit"]['all'] += claimServiceElmt.qty_provided
                     invoiceElemtTotal[claimServiceElmt.service.packagetype + "QtyTotalAuditedV"] += int(claimServiceElmt.qty_provided)
                     # invoiceElemtTotal["QtyTotalAuditedV"] += int(claimServiceElmt.qty_provided)
-                ## Specific Rules for Montant Recue (for different type of package)
+                # Specific Rules for Montant Recue (for different type of package)
                 if claimServiceElmt.service.packagetype == "S":
-                    invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["MontantRecue"] += claimServiceElmt.qty_provided * invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["tarif"]
+                    invoiceElemtList[claimServiceElmt.service.packagetype]\
+                        [claimServiceElmt.service.id]["MontantRecue"] +=\
+                            claimServiceElmt.qty_provided *\
+                                invoiceElemtList[claimServiceElmt.service.packagetype]\
+                                    [claimServiceElmt.service.id]["tarif"]
                 else:
                     # Desactivation du controle sur ManualPrice
                     #if claimServiceElmt.service.manualPrice == True :
-                    #    invoiceElemtList[claimServiceElmt.service.packagetype][claimServiceElmt.service.id]["MontantRecue"] += claimServiceElmt.qty_provided * claimServiceElmt.service.price
+                    #    invoiceElemtList[claimServiceElmt.service.packagetype]\
+                    # [claimServiceElmt.service.id]["MontantRecue"] +=\
+                    # claimServiceElmt.qty_provided * claimServiceElmt.service.price
                     #else :
                     claimSs = ClaimServiceService.objects.filter(
                         claim_service = claimServiceElmt
@@ -392,7 +416,7 @@ def medical_controller_claims_report_query(user, **kwargs):
                 if claimServiceElmt.service.packagetype not in invoiceElemtTotal :
                     invoiceElemtTotal[claimServiceElmt.service.packagetype] = defaultdict(int)
 
-                ### Sum of all line at footer of table
+                # Sum of all line at footer of table
                 invoiceElemtTotal[claimServiceElmt.service.packagetype+"QtyTotalV"] += int(claimServiceElmt.qty_provided)
                 MtnNotValideV = 0
                 if int(invoiceElemtTotal[claimServiceElmt.service.packagetype+"MontantRecueTotalV"] - invoiceElemtTotal[claimServiceElmt.service.packagetype+"MtnValideV"]) > 0:
@@ -406,30 +430,49 @@ def medical_controller_claims_report_query(user, **kwargs):
             #     status=1
             # )
             # for claimItemElmt in claimItem:
-            #     if claimItemElmt.service.id not in invoiceElemtList[claimItemElmt.service.packagetype]:
-            #         invoiceElemtList[claimItemElmt.service.packagetype][claimItemElmt.service.id] = defaultdict(int)
+            #     if claimItemElmt.service.id not in\
+            # invoiceElemtList[claimItemElmt.service.packagetype]:
+            #         invoiceElemtList[claimItemElmt.service.packagetype]\
+            # [claimItemElmt.service.id] = defaultdict(int)
 
             #     if cclaim.status == "16":
-            #         invoiceElemtList[claimItemElmt.service.packagetype][claimItemElmt.service.id]["qty"]['valuated'] += claimItemElmt.qty_provided
+            #         invoiceElemtList[claimItemElmt.service.packagetype]\
+            # [claimItemElmt.service.id]["qty"]['valuated'] += claimItemElmt.qty_provided
 
-            #     invoiceElemtList[claimItemElmt.service.packagetype][claimItemElmt.service.id]["name"] = claimItemElmt.service.name
-            #     invoiceElemtList[claimItemElmt.service.packagetype][claimItemElmt.service.id]["code"] = claimItemElmt.service.code
-            #     invoiceElemtList[claimItemElmt.service.packagetype][claimItemElmt.service.id]["tarif"] = claimItemElmt.price_asked
-            #     invoiceElemtList[claimItemElmt.service.packagetype][claimItemElmt.service.id]["qty"]["all"] += claimItemElmt.qty_provided
-            #     invoiceElemtList[claimItemElmt.service.packagetype][claimItemElmt.service.id]["MontantRecue"] += invoiceElemtList[claimItemElmt.service.packagetype][claimItemElmt.service.id]["qty"]['all'] * invoiceElemtList[claimItemElmt.service.packagetype][claimItemElmt.service.id]["tarif"]            
-                
+            #     invoiceElemtList[claimItemElmt.service.packagetype]\
+            # [claimItemElmt.service.id]["name"] = claimItemElmt.service.name
+            #     invoiceElemtList[claimItemElmt.service.packagetype]\
+            # [claimItemElmt.service.id]["code"] = claimItemElmt.service.code
+            #     invoiceElemtList[claimItemElmt.service.packagetype]\
+            # [claimItemElmt.service.id]["tarif"] = claimItemElmt.price_asked
+            #     invoiceElemtList[claimItemElmt.service.packagetype]\
+            # [claimItemElmt.service.id]["qty"]["all"] += claimItemElmt.qty_provided
+            #     invoiceElemtList[claimItemElmt.service.packagetype]\
+            # [claimItemElmt.service.id]["MontantRecue"] +=\
+            # invoiceElemtList[claimItemElmt.service.packagetype]\
+            # [claimItemElmt.service.id]["qty"]['all'] *\
+            # invoiceElemtList[claimItemElmt.service.packagetype][claimItemElmt.service.id]["tarif"]   
             #     if claimServiceElmt.service.packagetype not in invoiceElemtTotal :
             #         invoiceElemtTotal[claimServiceElmt.service.packagetype] = defaultdict(int)
 
-            #     invoiceElemtTotal[claimItemElmt.service.packagetype+"QtyTotalV"] += claimItemElmt.qty_provided
-            #     invoiceElemtTotal[claimItemElmt.service.packagetype+"QtyValuatedV"] += int(invoiceElemtList[claimItemElmt.service.packagetype][claimItemElmt.service.id]["qty"]['valuated'])
-            #     invoiceElemtTotal[claimItemElmt.service.packagetype+"MtnValideV"] += invoiceElemtList[claimItemElmt.service.packagetype][claimItemElmt.service.id]["qty"]['sum']
+            #     invoiceElemtTotal[claimItemElmt.service.packagetype+"QtyTotalV"] +=\
+            # claimItemElmt.qty_provided
+            #     invoiceElemtTotal[claimItemElmt.service.packagetype+"QtyValuatedV"] +=\
+            # int(invoiceElemtList[claimItemElmt.service.packagetype]\
+            # [claimItemElmt.service.id]["qty"]['valuated'])
+            #     invoiceElemtTotal[claimItemElmt.service.packagetype+"MtnValideV"] +=\
+            # invoiceElemtList[claimItemElmt.service.packagetype]\
+            # [claimItemElmt.service.id]["qty"]['sum']
             #     MtnNotValideV = 0
-            #     if invoiceElemtTotal[claimItemElmt.service.packagetype+"MontantRecueTotal"] - invoiceElemtTotal[claimItemElmt.service.packagetype+"MtnValide"] > 0:
-            #         MtnNotValideV = invoiceElemtTotal[claimItemElmt.service.packagetype+"MontantRecueTotal"] - invoiceElemtTotal[claimItemElmt.service.packagetype+"MtnValide"]
-            #     invoiceElemtTotal[claimItemElmt.service.packagetype+"MtnNotValideV"] = MtnNotValideV
+            #     if invoiceElemtTotal[claimItemElmt.service.packagetype+"MontantRecueTotal"] -\
+            # invoiceElemtTotal[claimItemElmt.service.packagetype+"MtnValide"] > 0:
+            #         MtnNotValideV =\
+            # invoiceElemtTotal[claimItemElmt.service.packagetype+"MontantRecueTotal"] -\
+            # invoiceElemtTotal[claimItemElmt.service.packagetype+"MtnValide"]
+            #     invoiceElemtTotal[claimItemElmt.service.packagetype+"MtnNotValideV"] =\
+            # MtnNotValideV
             #     invoiceElemtTotal["QtyTotalV"] += claimItemElmt.qty_provided
-        
+
         invoiceElemtTotal["PQtyValuatedV"]=0
         invoiceElemtTotal["PMontantRecueTotalV"] = 0
         invoiceElemtTotal["PMtnNotValideV"] = 0
@@ -472,10 +515,10 @@ def medical_controller_claims_report_query(user, **kwargs):
         invoiceElemtTotal["solde_ajusteS"] = 0
 
         for typeList,v in invoiceElemtList.items():
-            
             for id in v:
                 montantNonValide = 0
-                # Correction des chiffres negatif : -- Si un montant est negatif ca veut dire que le montant valuated est superieur a la somme des sous-services / services
+                # Correction des chiffres negatif : -- Si un montant est negatif ca veut dire que
+                # le montant valuated est superieur a la somme des sous-services / services
                 # if v[id]['MontantRecue'] - v[id]['qty']['sum'] > 0 :
                 montantNonValide = v[id]['MontantRecue'] - v[id]['qty']['sum']
                 if typeList=="P":
@@ -491,17 +534,18 @@ def medical_controller_claims_report_query(user, **kwargs):
                         name=v[id]['name'],
                         code=v[id]['code'],
                         tarif=str("{:,.0f}".format(v[id]['tarif'])),
-                        nbrFacture = str(int(v[id]['qty']['all'])),
-                        nbrFactureAudite = str(int(v[id]['qtyAudit']['all'])),
-                        mtnFactureRecues= str("{:,.0f}".format(v[id]['MontantRecue'])),
-                        mtnFactureAudite = str("{:,.0f}".format(v[id]['MontantRecueAudit'])),
-                        mtnFactureRejete = str("{:,.0f}".format(v[id]['MontantRejeteAudit'])),
-                        mtnFactureRetabli = str("{:,.0f}".format(v[id]['MontantRetabliAudit'])),
-                        mtnFactureAjuste = str("{:,.0f}".format(invoiceElemtTotal["solde_ajusteP"])),
-                        nbFactureValides= str(v[id]['qty']['valuated']),
-                        montantNonValide = str("{:,.0f}".format(montantNonValide)),
-                        montantValide =  str("{:,.0f}".format(v[id]['qty']['sum']))
-                        ))
+                        nbrFacture=str(int(v[id]['qty']['all'])),
+                        nbrFactureAudite=str(int(v[id]['qtyAudit']['all'])),
+                        mtnFactureRecues=str("{:,.0f}".format(v[id]['MontantRecue'])),
+                        mtnFactureAudite=str("{:,.0f}".format(v[id]['MontantRecueAudit'])),
+                        mtnFactureRejete=str("{:,.0f}".format(v[id]['MontantRejeteAudit'])),
+                        mtnFactureRetabli=str("{:,.0f}".format(v[id]['MontantRetabliAudit'])),
+                        mtnFactureAjuste=str("{:,.0f}".format(invoiceElemtTotal["solde_ajusteP"])),
+                        nbFactureValides=str(v[id]['qty']['valuated']),
+                        montantNonValide=str("{:,.0f}".format(montantNonValide)),
+                        montantValide=str("{:,.0f}".format(v[id]['qty']['sum']))
+                        )
+                    )
 
                     invoiceElemtTotal["PMontantRecueTotalV"] += v[id]['MontantRecue']
                     invoiceElemtTotal["PQtyValuatedV"] += v[id]['qty']['valuated']
@@ -555,20 +599,22 @@ def medical_controller_claims_report_query(user, **kwargs):
                         name=v[id]['name'],
                         code=v[id]['code'],
                         tarif=str("{:,.0f}".format(v[id]['tarif'])),
-                        nbrFacture = str(int(v[id]['qty']['all'])),
-                        nbrFactureAudite = str(int(v[id]['qtyAudit']['all'])),
-                        mtnFactureRecues= str("{:,.0f}".format(v[id]['MontantRecue'])),
-                        mtnFactureAudite = str("{:,.0f}".format(v[id]['MontantRecueAudit'])),
-                        mtnFactureRejete = str("{:,.0f}".format(v[id]['MontantRejeteAudit'])),
-                        mtnFactureRetabli = str("{:,.0f}".format(v[id]['MontantRetabliAudit'])),
-                        mtnFactureAjuste = str("{:,.0f}".format(invoiceElemtTotal["solde_ajusteS"])),
-                        nbFactureValides= str(v[id]['qty']['valuated']),
-                        montantNonValide = str("{:,.0f}".format(v[id]['MontantRecue'] - v[id]['qty']['sum'])),
-                        montantValide =  str("{:,.0f}".format(v[id]['qty']['sum']))
+                        nbrFacture=str(int(v[id]['qty']['all'])),
+                        nbrFactureAudite=str(int(v[id]['qtyAudit']['all'])),
+                        mtnFactureRecues=str("{:,.0f}".format(v[id]['MontantRecue'])),
+                        mtnFactureAudite=str("{:,.0f}".format(v[id]['MontantRecueAudit'])),
+                        mtnFactureRejete=str("{:,.0f}".format(v[id]['MontantRejeteAudit'])),
+                        mtnFactureRetabli=str("{:,.0f}".format(v[id]['MontantRetabliAudit'])),
+                        mtnFactureAjuste=str("{:,.0f}".format(invoiceElemtTotal["solde_ajusteS"])),
+                        nbFactureValides=str(v[id]['qty']['valuated']),
+                        montantNonValide=str(
+                            "{:,.0f}".format(v[id]['MontantRecue'] - v[id]['qty']['sum'])
+                        ),
+                        montantValide=str("{:,.0f}".format(v[id]['qty']['sum']))
                         ))
                     invoiceElemtTotal["SMontantRecueTotalV"] += v[id]['MontantRecue']
 
-        ## Calcaulating of each invoiceElemtTotal
+        # Calcaulating of each invoiceElemtTotal
         invoiceElemtTotal["NbFactureValideTotal"] = invoiceElemtTotal["FQtyValuatedV"] + invoiceElemtTotal["SQtyValuatedV"] + invoiceElemtTotal["PQtyValuatedV"]
         invoiceElemtTotal["NbFactureValideTotal"] = "{:,.0f}".format(invoiceElemtTotal["NbFactureValideTotal"])
         invoiceElemtTotal["FQtyValuated"] = "{:,.0f}".format(invoiceElemtTotal["FQtyValuatedV"])
@@ -616,12 +662,14 @@ def medical_controller_claims_report_query(user, **kwargs):
         invoiceElemtTotal_MontantRejeteTotal += invoiceElemtTotal["PMontantRejeteTotalV"]+invoiceElemtTotal["FMontantRejeteTotalV"] + invoiceElemtTotal["SMontantRejeteTotalV"]
         AllMontnAjusteTotal += invoiceElemtTotal["SMontantAjusteTotalV"]  + invoiceElemtTotal["FMontantAjusteTotalV"] + invoiceElemtTotal["PMontantAjusteTotalV"]
 
-        invoiceElemtTotal["PMontantRecueTotal"] = "{:,.0f}".format(invoiceElemtTotal["PMontantRecueTotalV"])
-        invoiceElemtTotal["SMontantRecueTotal"] = "{:,.0f}".format(invoiceElemtTotal["SMontantRecueTotalV"])
-        invoiceElemtTotal["FMontantRecueTotal"] = "{:,.0f}".format(invoiceElemtTotal["FMontantRecueTotalV"])
+        invoiceElemtTotal["PMontantRecueTotal"] =\
+            "{:,.0f}".format(invoiceElemtTotal["PMontantRecueTotalV"])
+        invoiceElemtTotal["SMontantRecueTotal"] =\
+            "{:,.0f}".format(invoiceElemtTotal["SMontantRecueTotalV"])
+        invoiceElemtTotal["FMontantRecueTotal"] =\
+            "{:,.0f}".format(invoiceElemtTotal["FMontantRecueTotalV"])
 
         invoiceElemtTotal["QtyTotal"] = "{:,.0f}".format(invoiceElemtTotal["QtyTotalV"])
-        # invoiceElemtTotal["QtyTotalAudited"] = "{:,.0f}".format(invoiceElemtTotal["QtyTotalAuditedV"])
 
         if i == 1:
             dictBase["prestationForfaitaire"] = invoiceElemtListP
@@ -634,40 +682,37 @@ def medical_controller_claims_report_query(user, **kwargs):
             dictBase["prestationsNonMedicalesProgram"+str(i)] = invoiceElemtListS
             dictBase["invoiceElemtTotalProgram"+str(i)] = invoiceElemtTotal
         i += 1
-    # dictBase["invoiceElemtTotal"]["MontantRecueTotal"] =  "{:,.0f}".format(invoiceElemtTotal_MontantRecueTotal)
-    # dictBase["invoiceElemtTotal"]["MtnValideTotal"] =  "{:,.0f}".format(invoiceElemtTotal_MtnValideTotal)
     dictBase["MontnRecueTotal"] =  "{:,.0f}".format(invoiceElemtTotal_MontantRecueTotal)
     dictBase["AllMontnRetabliTotal"] =  "{:,.0f}".format(invoiceElemtTotal_MontantRetabliTotal)
     dictBase["AllMontnRejeteTotal"] =  "{:,.0f}".format(invoiceElemtTotal_MontantRejeteTotal)
     dictBase["AllMontnAjusteTotal"] =  "{:,.0f}".format(AllMontnAjusteTotal)
-    
     dictBase["MtnValideTotal"] =  "{:,.0f}".format(invoiceElemtTotal_MtnValideTotal)
 
     if location0:
         location0_str = Location.objects.filter(
             code=location0,
             validity_to__isnull=True
-            ).first().name
+        ).first().name
         dictBase["region"] = location0_str
 
     if location1:
         location1_str = Location.objects.filter(
             code=location1,
             validity_to__isnull=True
-            ).first().name
+        ).first().name
         dictBase["district"] =location1_str
     if location2:
         location2_str = Location.objects.filter(
             code=location2,
             validity_to__isnull=True
-            ).first().name
+        ).first().name
         dictBase["area"] = location2_str
     # Invoice name
     hf_name = dictBase.get("fosa", "CSU")
     safe_hf_name = re.sub(r'[^\w\s-]', '', hf_name).strip().replace(' ', '_')
     period_start = _period_part(date_from)
     period_end = _period_part(date_to)
-    generation_date = timezone.now().strftime('%Y-%m-%dT%H-%M-%S')
+    generation_date = django_tz.now().strftime('%Y-%m-%dT%H-%M-%S')
     filename = f"Facture_{safe_hf_name}_{period_start}_{period_end}_{generation_date}"
     dictBase["report_filename"] = filename
 
