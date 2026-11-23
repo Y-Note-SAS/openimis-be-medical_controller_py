@@ -286,13 +286,7 @@ class MissionQueryTest(TestCase):
                                 districts {
                                     edges {
                                         node {
-                                            district {
-                                                edges {
-                                                    node {
-                                                        name
-                                                    }
-                                                }
-                                            }
+                                            id name
                                         }
                                     }
                                 }
@@ -354,7 +348,9 @@ class MissionQueryTest(TestCase):
                                 districts {
                                     edges {
                                         node {
-                                            code
+                                            district {
+                                                id name
+                                            }
                                         }
                                     }
                                 }
