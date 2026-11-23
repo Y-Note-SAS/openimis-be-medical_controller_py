@@ -287,8 +287,11 @@ class MissionQueryTest(TestCase):
                                     edges {
                                         node {
                                             districts {
-                                                id
-                                                name
+                                                edges {
+                                                    node {
+                                                        name
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -307,8 +310,8 @@ class MissionQueryTest(TestCase):
                 context_value=self.contextquery,
             )
 
-            print("result data 1", result.data)
-            print("result errors 1 ", result.errors)
+            print("result data 11", result.data)
+            print("result errors 11 ", result.errors)
 
             self.assertEqual(
                 len(result.data["missionsDistricts"]["edges"]),
@@ -346,7 +349,11 @@ class MissionQueryTest(TestCase):
                             node {
                                 missionCode
                                 region {
-                                    code
+                                    edges {
+                                        node {
+                                            code
+                                        }
+                                    }
                                 }
                                 districts {
                                     code
@@ -375,8 +382,8 @@ class MissionQueryTest(TestCase):
                 context_value=self.contextquery,
             )
 
-            print("result data ", result.data)
-            print("result errors ", result.errors)
+            print("result data 0 ", result.data)
+            print("result errors 0 ", result.errors)
 
             self.assertEqual(
                 len(
