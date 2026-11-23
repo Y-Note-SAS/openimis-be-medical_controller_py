@@ -283,7 +283,7 @@ class MissionQueryTest(TestCase):
                     missionsDistricts(mission_MissionCode: $missionCode) {
                         edges {
                             node {
-                                districts {
+                                district {
                                     edges {
                                         node {
                                             id name
@@ -377,9 +377,6 @@ class MissionQueryTest(TestCase):
                 variables=variables,
                 context_value=self.contextquery,
             )
-
-            print("result data 0 ", result.data)
-            print("result errors 0 ", result.errors)
 
             self.assertEqual(
                 len(
