@@ -307,6 +307,9 @@ class MissionQueryTest(TestCase):
                 context_value=self.contextquery,
             )
 
+            print("result data 1", result.data)
+            print("result errors 1 ", result.errors)
+
             self.assertEqual(
                 len(result.data["missionsDistricts"]["edges"]),
                 1,
@@ -374,6 +377,7 @@ class MissionQueryTest(TestCase):
             )
 
             print("result data ", result.data)
+            print("result errors ", result.errors)
 
             self.assertEqual(
                 len(
