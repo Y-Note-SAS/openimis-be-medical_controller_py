@@ -286,7 +286,7 @@ class MissionQueryTest(TestCase):
                                 districts {
                                     edges {
                                         node {
-                                            districts {
+                                            district {
                                                 edges {
                                                     node {
                                                         name
@@ -349,14 +349,14 @@ class MissionQueryTest(TestCase):
                             node {
                                 missionCode
                                 region {
+                                    code
+                                }
+                                districts {
                                     edges {
                                         node {
                                             code
                                         }
                                     }
-                                }
-                                districts {
-                                    code
                                 }
                                 status
                             }
