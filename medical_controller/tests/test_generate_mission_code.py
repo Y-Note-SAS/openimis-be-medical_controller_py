@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.test import TestCase
 
 from location.models import Location
@@ -39,7 +40,7 @@ class GenerateMissionCodeTest(TestCase):
             region=self.region,
             start_date="2026-01-01",
             end_date="2026-01-31",
-            mission_date="2026-01-31",
+            mission_date=datetime(2026, 1, 1, 0, 0),
             user=self.user,
         )
         mission.save(username=self.user.username)
@@ -63,7 +64,7 @@ class GenerateMissionCodeTest(TestCase):
             region=self.region,
             start_date="2026-01-01",
             end_date="2026-01-31",
-            mission_date="2026-01-31",
+            mission_date=datetime(2026, 1, 1, 0, 0),
             user=self.user,
         )
         mission.save(username=self.user.username)

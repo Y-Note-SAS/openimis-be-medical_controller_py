@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from unittest.mock import patch
 from types import SimpleNamespace
 import uuid
@@ -30,9 +30,9 @@ class MissionQueryTest(TestCase):
         self.mission = MedicalControlMission(
             mission_code="200001",
             region=self.region,
-            mission_date="2026-01-31",
             start_date=date(2026, 1, 1),
             end_date=date(2026, 1, 31),
+            mission_date=datetime(2026, 1, 1, 0, 0),
             status=MedicalControlMission.STATUS_IN_PROGRESS,
             user=self.user,
         )
@@ -309,7 +309,7 @@ class MissionQueryTest(TestCase):
             )
             self.assertEqual(
                 result.data["missionsDistricts"]["edges"][0]["node"]\
-                    ["districts"]["edges"][0]["node"]["district"]["name"],
+                    ["district"]["name"],
                 self.district.name,
             )
 
@@ -391,3 +391,34 @@ class MissionQueryTest(TestCase):
                 result.data["missions"]["edges"][0]["node"]["missionCode"],
                 self.mission.mission_code,
             )
+
+    @patch("medical_controller.schema.gql_optimizer.query")
+    def test_filter_by_mission_date(self, mock_optimizer):
+        """Le filtre mission_date doit selectionner les missions de l'intervalle."""
+        mock_optimizer.side_effect = lambda queryset, info: queryset
+
+        with patch.object(self.user, "has_perms", return_value=True):
+            schema = graphene.Schema(query=Query)
+            query = """
+                query($from: DateTime!, $to: DateTime!){
+                    missions(missionDate_Gte: $from, missionDate_Lte: $to){
+                        edges{ node{ missionCode } }
+                    }
+                }
+            """
+            result = schema.execute(
+                query,
+                variables={"from": "2026-01-01T00:00:00", "to": "2026-01-31T23:59:59"},
+                context_value=self.contextquery,
+            )
+            self.assertEqual(len(result.data["missions"]["edges"]), 1)
+            self.assertEqual(
+                result.data["missions"]["edges"][0]["node"]["missionCode"], "200001"
+            )
+
+            result_out = schema.execute(
+                query,
+                variables={"from": "2026-02-01T00:00:00", "to": "2026-02-28T23:59:59"},
+                context_value=self.contextquery,
+            )
+            self.assertEqual(len(result_out.data["missions"]["edges"]), 0)
