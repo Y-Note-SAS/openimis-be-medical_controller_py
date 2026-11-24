@@ -28,6 +28,7 @@ class MissionGQLType(DjangoObjectType):
             "start_date": ["exact", "lt", "lte", "gt", "gte"],
             "end_date": ["exact", "lt", "lte", "gt", "gte"],
             "mission_date": ["exact", "lt", "lte", "gt", "gte"],
+            "districts__district__id": ["exact", "in"],
             **prefix_filterset("region__", LocationGQLType._meta.filter_fields),
             **prefix_filterset("user__", UserGQLType._meta.filter_fields),
         }

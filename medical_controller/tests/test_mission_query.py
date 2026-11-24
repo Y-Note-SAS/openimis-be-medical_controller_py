@@ -113,6 +113,50 @@ class MissionQueryTest(TestCase):
                 ),
                 1,
             )
+            mission_district = MissionDistricts(
+                id=uuid.uuid4(),
+                mission=self.mission,
+                user_created=self.user,
+                user_updated=self.user,
+                district_id=self.district.id,
+            )
+            mission_district.save(username=self.user.username)
+
+            query = """
+                query($districts: [ID!]!) {
+                    missions(districts_District_Id_In: $districts) {
+                        edges {
+                            node {
+                                missionCode
+                            }
+                        }
+                    }
+                }
+            """
+
+            global_id = Node.to_global_id(
+                "LocationGQLType",
+                self.district.id
+            )
+
+            variables = {
+                "districts": [global_id]
+            }
+
+            schema = graphene.Schema(query=Query)
+
+            result = schema.execute(
+                query,
+                variables=variables,
+                context_value=self.contextquery
+            )
+
+            self.assertIsNone(result.errors, result.errors)
+
+            self.assertEqual(
+                len(result.data["missions"]["edges"]),
+                1,
+            )
 
     @patch("medical_controller.schema.gql_optimizer.query")
     def test_filter_by_status(self, mock_optimizer):
