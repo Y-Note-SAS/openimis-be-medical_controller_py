@@ -1,14 +1,14 @@
 from datetime import date, datetime
 from unittest.mock import patch
+from types import SimpleNamespace
+import uuid
 import graphene
 from graphene.relay import Node
 from django.test import TestCase
-from types import SimpleNamespace
-
-from medical_controller.schema import Query
-from medical_controller.models import MedicalControlMission
+from location.test_helpers import create_test_location
 from core.test_helpers import create_test_interactive_user
-from location.models import Location
+from medical_controller.schema import Query
+from medical_controller.models import MedicalControlMission, MissionDistricts
 
 
 class MissionQueryTest(TestCase):
@@ -19,17 +19,13 @@ class MissionQueryTest(TestCase):
         # On évite de remplacer has_perms par une lambda persistante.
         # On le mockera dans chaque test.
 
-        self.region = Location(
-            code="2",
-            name="East",
+        self.region = create_test_location(
+            loc_type="R"
         )
-        self.region.save()
 
-        self.district = Location(
-            code="21",
-            name="District",
+        self.district = create_test_location(
+            loc_type="D"
         )
-        self.district.save()
 
         self.mission = MedicalControlMission(
             mission_code="200001",
@@ -264,61 +260,53 @@ class MissionQueryTest(TestCase):
             )
 
     @patch("medical_controller.schema.gql_optimizer.query")
-    def test_filter_by_district(self, mock_optimizer):
+    def test_filter_by_districts(self, mock_optimizer):
         """
         Le filtre district_id doit sélectionner les missions
         du district demandé.
         """
-
         mock_optimizer.side_effect = lambda queryset, info: queryset
 
-        with patch.object(
-            self.user,
-            "has_perms",
-            return_value=True,
-        ):
-
-            global_id = Node.to_global_id(
-                "LocationGQLType",
-                self.district.id
+        with patch.object(self.user, "has_perms", return_value=True):
+            mission_district = MissionDistricts(
+                id=uuid.uuid4(),
+                mission=self.mission,
+                user_created=self.user,
+                user_updated=self.user,
+                district_id=self.district.id,
             )
+            mission_district.save(username=self.user.username)
+
+            code = self.mission.mission_code
             query = """
-                query($district: ID!){
-                    missions(district_Id: $district){
-                        edges{
-                        node{
-                            missionCode
-                            district
-                            {
-                            code
+                query($missionCode: String!) {
+                    missionsDistricts(mission_MissionCode: $missionCode) {
+                        edges {
+                            node {
+                                district {
+                                    id name
+                                }
                             }
-                        }
                         }
                     }
                 }
             """
-            variables = {
-                "district": global_id
-            }
-            schema = graphene.Schema(
-                query=Query
-            )
+            variables = {"missionCode": code}
+            schema = graphene.Schema(query=Query)
 
             result = schema.execute(
                 query,
                 variables=variables,
-                context_value=self.contextquery
+                context_value=self.contextquery,
             )
 
             self.assertEqual(
-                len(
-                    result.data["missions"]["edges"]
-                ),
+                len(result.data["missionsDistricts"]["edges"]),
                 1,
             )
             self.assertEqual(
-                result.data["missions"]["edges"][0]["node"]["district"]["code"],
-                self.district.code,
+                result.data["missionsDistricts"]["edges"][0]["node"]["district"]["name"],
+                self.district.name,
             )
 
     @patch("medical_controller.schema.gql_optimizer.query")
@@ -334,13 +322,11 @@ class MissionQueryTest(TestCase):
             query = """
                 query(
                     $region: ID!,
-                    $district: ID!,
                     $status: MedicalControlMissionStatus!,
                     $missionCode: String!
                 ) {
                     missions(
                         region_Id: $region,
-                        district_Id: $district,
                         status: $status,
                         missionCode: $missionCode
                     ) {
@@ -351,8 +337,14 @@ class MissionQueryTest(TestCase):
                                 region {
                                     code
                                 }
-                                district {
-                                    code
+                                districts {
+                                    edges {
+                                        node {
+                                            district {
+                                                id name
+                                            }
+                                        }
+                                    }
                                 }
                                 status
                             }
@@ -366,12 +358,8 @@ class MissionQueryTest(TestCase):
                     "LocationGQLType",
                     self.region.id
                 ),
-                "district": Node.to_global_id(
-                    "LocationGQLType",
-                    self.district.id
-                ),
                 "status": MedicalControlMission.STATUS_IN_PROGRESS,
-                "missionCode": "200001",
+                "missionCode": self.mission.mission_code,
             }
 
             schema = graphene.Schema(query=Query)
@@ -391,15 +379,13 @@ class MissionQueryTest(TestCase):
 
             self.assertEqual(
                 result.data["missions"]["edges"][0]["node"]["region"]["code"], self.region.code)
-            node = result.data["missions"]["edges"][0]["node"]
-            self.assertEqual(node["district"]["code"], self.district.code)
             self.assertEqual(
                 result.data["missions"]["edges"][0]["node"]["status"],
                 MedicalControlMission.STATUS_IN_PROGRESS,
             )
             self.assertEqual(
                 result.data["missions"]["edges"][0]["node"]["missionCode"],
-                "200001",
+                self.mission.mission_code,
             )
 
     @patch("medical_controller.schema.gql_optimizer.query")
