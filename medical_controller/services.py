@@ -21,6 +21,7 @@ CATEGORY_5_CODES = [
     "FCS13"
 ]
 
+
 def _get_service_groups(category):
     if category == "3":
         return {
@@ -89,6 +90,7 @@ def _sample_claims_by_service(
             )
 
     return Claim.objects.filter(id__in=selected_ids)
+
 
 def _sample_claims(queryset, percentage):
     claim_ids = list(

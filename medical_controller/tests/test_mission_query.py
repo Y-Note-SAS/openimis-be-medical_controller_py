@@ -305,8 +305,7 @@ class MissionQueryTest(TestCase):
                 1,
             )
             self.assertEqual(
-                result.data["missionsDistricts"]["edges"][0]["node"]\
-                    ["district"]["name"],
+                result.data["missionsDistricts"]["edges"][0]["node"]["district"]["name"],
                 self.district.name,
             )
 

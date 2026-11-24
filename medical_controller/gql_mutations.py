@@ -247,11 +247,9 @@ class TreatClaimsMutation(OpenIMISMutation):
             non_rejected = Claim.objects.filter(
                 id__in=claim_ids, validity_to__isnull=True).exclude(status=1)
             if non_rejected.exists():
-                codes = list(non_rejected.values_list('code', flat=True))
-                err =\
-                f"Cannot rehabilitate: the following claims are not rejected: {', '.join(codes)}"
+                c = list(non_rejected.values_list('code', flat=True))
                 raise ValidationError(
-                    err
+                    f"Cannot rehabilitate: the following claims are not rejected: {', '.join(c)}"
                 )
             Claim.objects.filter(
                 id__in=claim_ids, validity_to__isnull=True).update(audit_status='H')
@@ -313,24 +311,22 @@ class UpdateMissionMutation(OpenIMISMutation):
                     _("mutation.only_mission_chief_can_close_mission")
                 )
 
-        user_ids = data.get("user_ids", None)
-        msg = ""
-        if user_ids is not None:
-            msg += _("Set controllers to %(user_ids)s on the mission %(mission_code)s") % {
-                "user_ids": user_ids,
-                "mission_code": mission.mission_code
-            }
-            MissionUsers.objects.filter(mission=mission).delete()
-            MissionUsers.objects.bulk_create([
-                MissionUsers(
-                    id=uuid.uuid4(),
-                    mission=mission,
-                    user_created=user,
-                    user_updated=user,
-                    user_id=user_id
-                )
-                for user_id in user_ids
-            ])
+        user_ids = data.get("user_ids", [])
+        MissionUsers.objects.filter(mission=mission).delete()
+        MissionUsers.objects.bulk_create([
+            MissionUsers(
+                id=uuid.uuid4(),
+                mission=mission,
+                user_created=user,
+                user_updated=user,
+                user_id=user_id
+            )
+            for user_id in user_ids
+        ])
+        msg = _("Set controllers to %(user_ids)s on the mission %(mission_code)s") % {
+            "user_ids": user_ids,
+            "mission_code": mission.mission_code
+        }
 
         if mission_status == "C":
             claims_for_mission = FilteredClaimsForMission.objects.filter(
@@ -360,12 +356,11 @@ class UpdateMissionMutation(OpenIMISMutation):
         mission.date_updated = TimeUtils.now()
         mission.save(username=user.username)
 
-        if msg != "":
-            mission_activity = MissionActivityHistory(
-                mission=mission,
-                action=msg,
-                user=user,
-                user_created=user,
-                user_updated=user,
-            )
-            mission_activity.save(username=user.username)
+        mission_activity = MissionActivityHistory(
+            mission=mission,
+            action=msg,
+            user=user,
+            user_created=user,
+            user_updated=user,
+        )
+        mission_activity.save(username=user.username)
