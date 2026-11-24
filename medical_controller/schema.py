@@ -82,6 +82,7 @@ class ClaimSampleResultGQLType(graphene.ObjectType):
         ClaimSampleCategoryGQLType
     )
 
+
 class Query(graphene.ObjectType):
 
     missions = OrderedDjangoFilterConnectionField(
