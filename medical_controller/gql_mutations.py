@@ -20,6 +20,26 @@ from .models import (
 from .apps import MedicalControllerConfig
 
 
+def _clean_mission_user_ids(user, user_ids):
+    """Retire le chef de mission et les doublons des auditeurs.
+
+    Le chef de mission est le createur de la mission : il ne peut pas etre
+    enregistre comme auditeur de sa propre mission, quelle que soit l'interface
+    appelante.
+    """
+    chief_id = None
+    i_user = getattr(user, "i_user", None)
+    if i_user is not None:
+        chief_id = getattr(i_user, "id", None)
+
+    cleaned = []
+    for user_id in user_ids or []:
+        if user_id is None or user_id == chief_id or user_id in cleaned:
+            continue
+        cleaned.append(user_id)
+    return cleaned
+
+
 class CreateMissionInputType(OpenIMISMutation.Input):
 
     region_id = graphene.Int(required=True)
@@ -125,7 +145,7 @@ class CreateMissionMutation(OpenIMISMutation):
 
         hf_ids = data["health_facility_ids"]
 
-        user_ids = data.get("user_ids", [])
+        user_ids = _clean_mission_user_ids(user, data.get("user_ids", []))
 
         if not hf_ids:
             raise ValidationError(
@@ -311,22 +331,25 @@ class UpdateMissionMutation(OpenIMISMutation):
                     _("mutation.only_mission_chief_can_close_mission")
                 )
 
-        user_ids = data.get("user_ids", [])
-        MissionUsers.objects.filter(mission=mission).delete()
-        MissionUsers.objects.bulk_create([
-            MissionUsers(
-                id=uuid.uuid4(),
-                mission=mission,
-                user_created=user,
-                user_updated=user,
-                user_id=user_id
-            )
-            for user_id in user_ids
-        ])
-        msg = _("Set controllers to %(user_ids)s on the mission %(mission_code)s") % {
-            "user_ids": user_ids,
-            "mission_code": mission.mission_code
-        }
+        user_ids = data.get("user_ids", None)
+        msg = ""
+        if user_ids is not None:
+            user_ids = _clean_mission_user_ids(user, user_ids)
+            MissionUsers.objects.filter(mission=mission).delete()
+            MissionUsers.objects.bulk_create([
+                MissionUsers(
+                    id=uuid.uuid4(),
+                    mission=mission,
+                    user_created=user,
+                    user_updated=user,
+                    user_id=user_id
+                )
+                for user_id in user_ids
+            ])
+            msg += _("Set controllers to %(user_ids)s on the mission %(mission_code)s") % {
+                "user_ids": user_ids,
+                "mission_code": mission.mission_code
+            }
 
         if mission_status == "C":
             claims_for_mission = FilteredClaimsForMission.objects.filter(
