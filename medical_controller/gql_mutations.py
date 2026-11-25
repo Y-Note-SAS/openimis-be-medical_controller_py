@@ -331,22 +331,25 @@ class UpdateMissionMutation(OpenIMISMutation):
                     _("mutation.only_mission_chief_can_close_mission")
                 )
 
-        user_ids = _clean_mission_user_ids(user, data.get("user_ids", []))
-        MissionUsers.objects.filter(mission=mission).delete()
-        MissionUsers.objects.bulk_create([
-            MissionUsers(
-                id=uuid.uuid4(),
-                mission=mission,
-                user_created=user,
-                user_updated=user,
-                user_id=user_id
-            )
-            for user_id in user_ids
-        ])
-        msg = _("Set controllers to %(user_ids)s on the mission %(mission_code)s") % {
-            "user_ids": user_ids,
-            "mission_code": mission.mission_code
-        }
+        user_ids = data.get("user_ids", None)
+        msg = ""
+        if user_ids is not None:
+            user_ids = _clean_mission_user_ids(user, user_ids)
+            MissionUsers.objects.filter(mission=mission).delete()
+            MissionUsers.objects.bulk_create([
+                MissionUsers(
+                    id=uuid.uuid4(),
+                    mission=mission,
+                    user_created=user,
+                    user_updated=user,
+                    user_id=user_id
+                )
+                for user_id in user_ids
+            ])
+            msg += _("Set controllers to %(user_ids)s on the mission %(mission_code)s") % {
+                "user_ids": user_ids,
+                "mission_code": mission.mission_code
+            }
 
         if mission_status == "C":
             claims_for_mission = FilteredClaimsForMission.objects.filter(
