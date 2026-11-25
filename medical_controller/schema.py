@@ -128,10 +128,10 @@ class Query(graphene.ObjectType):
 
     check_mission_availability = graphene.Field(
         DistrictHFGQLType,
-        health_facility_ids = graphene.List(graphene.Int, required=True),
-        district_ids = graphene.List(graphene.Int, required=True),
-        start_date = graphene.Date(required=True),
-        end_date = graphene.Date(required=True)
+        health_facility_ids=graphene.List(graphene.Int, required=True),
+        district_ids=graphene.List(graphene.Int, required=True),
+        start_date=graphene.Date(required=True),
+        end_date=graphene.Date(required=True)
     )
 
     mission_activity_history = OrderedDjangoFilterConnectionField(
