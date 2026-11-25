@@ -106,6 +106,67 @@ class CreateMissionMutationTest(TestCase):
             2,
         )
 
+    def test_chief_is_never_saved_as_auditor(self):
+        other_auditor = create_test_interactive_user(
+            username="OtherAuditorTest"
+        )
+
+        CreateMissionMutation.async_mutate(
+            self.user,
+            region_id=self.region.id,
+            district_ids=[self.district.id],
+            health_facility_ids=[self.hf1.id],
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+            mission_date=date(2026, 1, 1),
+            user_ids=[
+                self.user.i_user.id,
+                other_auditor.i_user.id,
+                other_auditor.i_user.id,
+            ],
+        )
+
+        mission = MedicalControlMission.objects.order_by(
+            "-date_created"
+        ).first()
+
+        auditors = list(mission.users.values_list("user_id", flat=True))
+
+        self.assertEqual(auditors, [other_auditor.i_user.id])
+
+    def test_update_never_saves_chief_as_auditor(self):
+        other_auditor = create_test_interactive_user(
+            username="OtherAuditorUpdate"
+        )
+
+        CreateMissionMutation.async_mutate(
+            self.user,
+            region_id=self.region.id,
+            district_ids=[self.district.id],
+            health_facility_ids=[self.hf1.id],
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+            mission_date=date(2026, 1, 1),
+        )
+
+        mission = MedicalControlMission.objects.order_by(
+            "-date_created"
+        ).first()
+
+        UpdateMissionMutation.async_mutate(
+            self.user,
+            mission_code=mission.mission_code,
+            status=mission.status,
+            user_ids=[
+                self.user.i_user.id,
+                other_auditor.i_user.id,
+            ],
+        )
+
+        auditors = list(mission.users.values_list("user_id", flat=True))
+
+        self.assertEqual(auditors, [other_auditor.i_user.id])
+
     def test_requires_at_least_one_health_facility(self):
 
         with self.assertRaises(ValidationError):
