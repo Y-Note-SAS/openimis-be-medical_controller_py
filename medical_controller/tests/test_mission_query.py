@@ -5,10 +5,15 @@ import uuid
 import graphene
 from graphene.relay import Node
 from django.test import TestCase
-from location.test_helpers import create_test_location
+from django.core.exceptions import PermissionDenied
+from location.test_helpers import create_test_location, create_test_health_facility
 from core.test_helpers import create_test_interactive_user
 from medical_controller.schema import Query
-from medical_controller.models import MedicalControlMission, MissionDistricts
+from medical_controller.models import (
+    MedicalControlMission,
+    MissionDistricts,
+    MissionHealthFacility
+)
 
 
 class MissionQueryTest(TestCase):
@@ -462,3 +467,301 @@ class MissionQueryTest(TestCase):
                 context_value=self.contextquery,
             )
             self.assertEqual(len(result_out.data["missions"]["edges"]), 0)
+
+
+class TestGetAvailableDistrictsAndHF(TestCase):
+    """Test for check mission availabilty"""
+
+    def setUp(self):
+        self.user = create_test_interactive_user()
+        self.user.has_perms = lambda perms: True
+
+        self.contextquery = SimpleNamespace(
+            user=self.user,
+            headers={"User-Agent": "test"}
+        )
+
+        self.info = SimpleNamespace(
+            context=SimpleNamespace(user=self.user)
+        )
+
+        # Création des districts
+        self.district_4 = create_test_location(
+            "D",
+            custom_props={
+                "code": "D004",
+                "name": "District 4"
+            }
+        )
+        self.district_5 = create_test_location(
+            "D",
+            custom_props={
+                "code": "D005",
+                "name": "District 5"
+            }
+        )
+
+        self.region = create_test_location(
+            "R",
+            custom_props={
+                "code": "R001",
+                "name": "Region 1"
+            }
+        )
+
+        # Création des FOSA
+        self.hf_1 = create_test_health_facility(
+            "HF001",
+            self.district_4
+        )
+        self.hf_2 = create_test_health_facility(
+            "HF002",
+            location_id=self.district_4
+        )
+        self.hf_3 = create_test_health_facility(
+            "HF003",
+            location_id=self.district_5
+        )
+        self.hf_4 = create_test_health_facility(
+            "HF004",
+            location_id=self.district_5
+        )
+
+        self.start_date = date(2026, 1, 1)
+        self.end_date = date(2026, 1, 31)
+
+    def create_mission(self, mission_code, start_date, end_date):
+
+        mission = MedicalControlMission(
+            mission_code=mission_code,
+            region=self.region,
+            start_date=start_date,
+            end_date=end_date,
+            mission_date=end_date,
+            status=MedicalControlMission.STATUS_IN_PROGRESS,
+            user=self.user,
+        )
+        return mission.save(username=self.user.username)
+
+    def assign_district(self, mission, district):
+
+        mission_district = MissionDistricts(
+            id=uuid.uuid4(),
+            mission=mission,
+            user_created=self.user,
+            user_updated=self.user,
+            district_id=district.id,
+        )
+        return mission_district.save(username=self.user.username)
+
+    def assign_hf(self, mission, hf):
+
+        mission_hf = MissionHealthFacility.objects.create(
+            id=uuid.uuid4(),
+            mission=mission,
+            user_created=self.user,
+            user_updated=self.user,
+            health_facility_id=hf
+        )
+        return mission_hf.save(username=self.user.username)
+
+    # def call_resolver(self):
+    #     return Query().resolve_get_available_districts_and_hf(
+    #         None,
+    #         self.info,
+    #         district_ids=[
+    #             self.district_4.id,
+    #             self.district_5.id,
+    #         ],
+    #         health_facility_ids=[
+    #             self.hf_1.id,
+    #             self.hf_2.id,
+    #             self.hf_3.id,
+    #             self.hf_4.id,
+    #         ],
+    #         start_date=self.start_date,
+    #         end_date=self.end_date,
+    #     )
+
+    @patch("medical_controller.schema.gql_optimizer.query")
+    def execute_available_districts_query(self, mock_optimizer):
+        mock_optimizer.side_effect = lambda queryset, info: queryset
+
+        with patch.object(
+            self.user,
+            "has_perms",
+            return_value=True,
+        ):
+            query = """
+                query(
+                    $districtIds: [Int!]!,
+                    $healthFacilityIds: [Int!]!,
+                    $startDate: Date!,
+                    $endDate: Date!
+                ) {
+                    getAvailableDistrictsAndHf(
+                        districtIds: $districtIds,
+                        healthFacilityIds: $healthFacilityIds,
+                        startDate: $startDate,
+                        endDate: $endDate
+                    ) {
+                        districtIds
+                        healthFacilityIds
+                    }
+                }
+            """
+
+            variables = {
+                "districtIds": [
+                    self.district_4.id,
+                    self.district_5.id,
+                ],
+                "healthFacilityIds": [
+                    self.hf_1.id,
+                    self.hf_2.id,
+                    self.hf_3.id,
+                    self.hf_4.id,
+                ],
+                "startDate": "2026-01-01",
+                "endDate": "2026-01-31",
+            }
+
+            schema = graphene.Schema(query=Query)
+
+            result = schema.execute(
+                query,
+                variables=variables,
+                context_value=self.contextquery,
+            )
+
+            return result
+
+    def test_returns_all_districts_and_hfs_when_no_mission_exists(self):
+        """
+        Aucune mission sur la période :
+        toutes les données initiales doivent être retournées.
+        """
+        result = self.execute_available_districts_query()
+        print("result 1", result)
+        data = result.data
+
+        self.assertIsNone(result.errors)
+
+        self.assertEqual(
+            set(data["checkMissionAvailability"]["districtIds"]),
+            {self.district_4.id, self.district_5.id},
+        )
+        self.assertEqual(
+            set(data["checkMissionAvailability"]["healthFacilityIds"]),
+            {
+                self.hf_1.id,
+                self.hf_2.id,
+                self.hf_3.id,
+                self.hf_4.id,
+            },
+        )
+
+    def test_removes_district_when_all_its_hfs_are_assigned(self):
+        mission = self.create_mission(
+            "MISSION002",
+            date(2026, 1, 5),
+            date(2026, 1, 25),
+        )
+
+        self.assign_district(mission, self.district_4)
+        self.assign_hf(mission, self.hf_1)
+        self.assign_hf(mission, self.hf_2)
+
+        result = self.execute_available_districts_query()
+        print("result2 ", result)
+        data = result.data
+
+        self.assertIsNone(result.errors)
+
+        data = result.data["checkMissionAvailability"]
+
+        self.assertEqual(data["districtIds"], [self.district_5.id])
+
+        self.assertEqual(
+            set(data["healthFacilityIds"]),
+            {self.hf_3.id, self.hf_4.id},
+        )
+
+    def test_keeps_district_when_at_least_one_hf_is_available(self):
+        """
+        Si une seule FOSA reste disponible,
+        le district doit être conservé avec cette FOSA.
+        """
+        mission = self.create_mission(
+            "MISSION003",
+            date(2026, 1, 5),
+            date(2026, 1, 25),
+        )
+
+        self.assign_hf(mission, self.hf_1)
+
+        result = self.execute_available_districts_query()
+        print("result4 ", result)
+        data = result.data["checkMissionAvailability"]
+
+        self.assertIn(
+            self.district_4.id,
+            data["district_ids"],
+        )
+
+        self.assertIn(self.hf_2.id, result.health_facility_ids)
+        self.assertNotIn(self.hf_1.id, result.health_facility_ids)
+
+    def test_ignores_missions_outside_requested_period(self):
+        """
+        Une mission terminée avant la période demandée
+        ne doit pas empêcher l'éligibilité.
+        """
+        mission = self.create_mission(
+            "MISSION004",
+            date(2025, 11, 1),
+            date(2025, 12, 31),
+        )
+
+        self.assign_district(mission, self.district_4)
+        self.assign_hf(mission, self.hf_1)
+
+        result = self.execute_available_districts_query()
+        print("result6 ", result)
+        data = result.data["checkMissionAvailability"]
+
+        self.assertIn(
+            self.district_4.id,
+            data["district_ids"],
+        )
+        self.assertIn(self.hf_1.id, data["health_facility_ids"])
+
+    def test_includes_missions_that_overlap_requested_period(self):
+        """
+        Une mission qui commence avant la période demandée
+        mais se termine pendant celle-ci doit être prise en compte.
+        """
+        mission = self.create_mission(
+            "MISSION005",
+            date(2025, 12, 20),
+            date(2026, 1, 10),
+        )
+
+        self.assign_district(mission, self.district_4)
+        self.assign_hf(mission, self.hf_1)
+
+        result = self.execute_available_districts_query()
+        print("result 7 ", result)
+        data = result.data["checkMissionAvailability"]
+
+        self.assertNotIn(
+            self.district_4.id,
+            data["district_ids"],
+        )
+        self.assertNotIn(self.hf_1.id, data["health_facility_ids"])
+
+    def test_raises_permission_denied_without_permission(self):
+        self.user.has_perms = lambda perms: False
+
+        with self.assertRaises(PermissionDenied):
+            self.execute_available_districts_query()
