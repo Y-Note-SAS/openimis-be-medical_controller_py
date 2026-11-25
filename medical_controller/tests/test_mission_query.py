@@ -565,24 +565,6 @@ class TestGetAvailableDistrictsAndHF(TestCase):
         )
         return mission_hf.save(username=self.user.username)
 
-    # def call_resolver(self):
-    #     return Query().resolve_get_available_districts_and_hf(
-    #         None,
-    #         self.info,
-    #         district_ids=[
-    #             self.district_4.id,
-    #             self.district_5.id,
-    #         ],
-    #         health_facility_ids=[
-    #             self.hf_1.id,
-    #             self.hf_2.id,
-    #             self.hf_3.id,
-    #             self.hf_4.id,
-    #         ],
-    #         start_date=self.start_date,
-    #         end_date=self.end_date,
-    #     )
-
     @patch("medical_controller.schema.gql_optimizer.query")
     def execute_available_districts_query(self, mock_optimizer):
         mock_optimizer.side_effect = lambda queryset, info: queryset
@@ -642,7 +624,6 @@ class TestGetAvailableDistrictsAndHF(TestCase):
         toutes les données initiales doivent être retournées.
         """
         result = self.execute_available_districts_query()
-        print("result 1", result)
         data = result.data
 
         self.assertIsNone(result.errors)
@@ -673,7 +654,6 @@ class TestGetAvailableDistrictsAndHF(TestCase):
         self.assign_hf(mission, self.hf_2)
 
         result = self.execute_available_districts_query()
-        print("result2 ", result)
         data = result.data
 
         self.assertIsNone(result.errors)
@@ -701,7 +681,6 @@ class TestGetAvailableDistrictsAndHF(TestCase):
         self.assign_hf(mission, self.hf_1)
 
         result = self.execute_available_districts_query()
-        print("result4 ", result)
         data = result.data["checkMissionAvailability"]
 
         self.assertIn(
@@ -727,7 +706,6 @@ class TestGetAvailableDistrictsAndHF(TestCase):
         self.assign_hf(mission, self.hf_1)
 
         result = self.execute_available_districts_query()
-        print("result6 ", result)
         data = result.data["checkMissionAvailability"]
 
         self.assertIn(
@@ -751,7 +729,6 @@ class TestGetAvailableDistrictsAndHF(TestCase):
         self.assign_hf(mission, self.hf_1)
 
         result = self.execute_available_districts_query()
-        print("result 7 ", result)
         data = result.data["checkMissionAvailability"]
 
         self.assertNotIn(
