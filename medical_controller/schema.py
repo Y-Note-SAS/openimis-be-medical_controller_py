@@ -10,6 +10,7 @@ from claim.models import Claim
 from core.models import User
 from core.schema import OrderedDjangoFilterConnectionField, UserGQLType
 
+from location.models import HealthFacility
 from .apps import MedicalControllerConfig
 from .gql_mutations import (
     CreateMissionMutation,
@@ -27,6 +28,8 @@ from .models import (
     FilteredClaimsForMission,
     MedicalControlMission,
     MissionActivityHistory,
+    MissionDistricts,
+    MissionHealthFacility
 )
 from .services import process_category
 
@@ -51,6 +54,11 @@ class ClaimsForHealthFacilitiesResultGQLType(graphene.ObjectType):
     )
 
     all_audited = graphene.Boolean()
+
+
+class DistrictHFGQLType(graphene.ObjectType):
+    district_ids = graphene.List(graphene.Int)
+    health_facility_ids = graphene.List(graphene.Int)
 
 
 class ClaimSampleCategoryGQLType(graphene.ObjectType):
@@ -119,8 +127,9 @@ class Query(graphene.ObjectType):
     )
 
     check_mission_availability = graphene.Field(
-        graphene.Boolean,
-        district_id=graphene.Int(required=True),
+        DistrictHFGQLType,
+        health_facility_ids=graphene.List(graphene.Int, required=True),
+        district_ids=graphene.List(graphene.Int, required=True),
         start_date=graphene.Date(required=True),
         end_date=graphene.Date(required=True)
     )
@@ -155,20 +164,6 @@ class Query(graphene.ObjectType):
             required=True
         )
     )
-
-    def resolve_check_mission_availability(self, info, **kwargs):
-
-        district_id = kwargs.get("district_id")
-        start_date = kwargs.get("start_date")
-        end_date = kwargs.get("end_date")
-
-        # Vérifie qu'il n'y a AUCUNE mission qui chevauche ce district sur cette période
-        if MedicalControlMission.objects.filter(
-            Q(start_date__lte=end_date) & Q(end_date__gte=start_date),
-            district__id=district_id
-        ).exists():
-            return False
-        return True
 
     def resolve_claims_for_health_facilities(self, info, search=None, **kwargs):
         if not info.context.user.has_perms(
@@ -290,6 +285,84 @@ class Query(graphene.ObjectType):
             validity_to__isnull=True,
             i_user__user_roles__role__rights__right_id=112000
         ).distinct()
+
+    def resolve_check_mission_availability(
+        self,
+        info,
+        search=None,
+        **kwargs,
+    ):
+        if not info.context.user.has_perms(
+            MedicalControllerConfig.gql_mutation_medical_controller_perms
+        ):
+            raise PermissionDenied(_("unauthorized"))
+
+        start_date = kwargs.get("start_date")
+        end_date = kwargs.get("end_date")
+
+        district_ids = kwargs.get("district_ids", [])
+        health_facility_ids = kwargs.get("health_facility_ids", [])
+
+        missions = MedicalControlMission.objects.filter(
+            start_date__lte=end_date,
+            end_date__gte=start_date,
+        )
+
+        mission_ids = missions.values_list("id", flat=True)
+
+        assigned_district_ids = set(
+            MissionDistricts.objects.filter(
+                mission_id__in=mission_ids,
+                district_id__in=district_ids,
+            ).values_list("district_id", flat=True)
+        )
+
+        assigned_hf_ids = set(
+            MissionHealthFacility.objects.filter(
+                mission_id__in=mission_ids,
+                health_facility_id__in=health_facility_ids,
+            ).values_list("health_facility_id", flat=True)
+        )
+
+        available_hf_ids = [
+            hf_id
+            for hf_id in health_facility_ids
+            if hf_id not in assigned_hf_ids
+        ]
+
+        # Un district doit avoir au moins une FOSA disponible
+        # et ne doit pas être déjà affecté à une mission.
+        available_district_ids = []
+
+        available_hfs_by_district = {}
+
+        for hf in HealthFacility.objects.filter(
+            id__in=available_hf_ids,
+            location_id__in=district_ids,
+        ).values("id", "location_id"):
+
+            available_hfs_by_district.setdefault(
+                hf["location_id"], []
+            ).append(hf["id"])
+
+        for district_id in district_ids:
+            if district_id in assigned_district_ids:
+                continue
+
+            if available_hfs_by_district.get(district_id):
+                available_district_ids.append(district_id)
+
+        # Ne retourner que les FOSA des districts conservés
+        available_hf_ids = [
+            hf_id
+            for district_id in available_district_ids
+            for hf_id in available_hfs_by_district.get(district_id, [])
+        ]
+
+        return DistrictHFGQLType(
+            district_ids=available_district_ids,
+            health_facility_ids=available_hf_ids,
+        )
 
     def resolve_get_claims_sample(
         self,
