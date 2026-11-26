@@ -316,7 +316,7 @@ def medical_controller_claims_report_query(user, **kwargs):
             validity_to__isnull=True,
             program=value,
             audited=True
-            # **dictGeo
+            **dictGeo
         )
 
         invoiceElemtList = defaultdict(dict)
@@ -329,7 +329,7 @@ def medical_controller_claims_report_query(user, **kwargs):
             # First we calculate on each Service inside a
             claimService = ClaimService.objects.filter(
                 claim=cclaim,
-                # status=1
+                status=1
             ).filter(validity_to__isnull=True)
             for claimServiceElmt in claimService:
                 invoiceElemtTotal[claimServiceElmt.service.packagetype + "QtyValuatedV"] = 0
