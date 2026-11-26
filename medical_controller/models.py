@@ -315,7 +315,6 @@ def medical_controller_claims_report_query(user, **kwargs):
             date_to__lte=date_to,
             validity_to__isnull=True,
             program=value,
-            audited=True
             **dictGeo
         )
 
