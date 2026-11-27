@@ -402,10 +402,14 @@ def medical_controller_claims_report_query(user, **kwargs):
                     ] += int(claimServiceElmt.qty_provided)
                     # invoiceElemtTotal["QtyTotalAuditedV"] += int(claimServiceElmt.qty_provided)
                 # Specific Rules for Montant Recue (for different type of package)
+                amount = 0
                 if claimServiceElmt.service.packagetype == "S":
                     invoiceElemtList[claimServiceElmt.service.packagetype][
                         claimServiceElmt.service.id
                     ]["MontantRecue"] += claimServiceElmt.qty_provided * invoiceElemtList[
+                        claimServiceElmt.service.packagetype
+                    ][claimServiceElmt.service.id]["tarif"]
+                    amount = claimServiceElmt.qty_provided * invoiceElemtList[
                         claimServiceElmt.service.packagetype
                     ][claimServiceElmt.service.id]["tarif"]
                 else:
@@ -431,26 +435,48 @@ def medical_controller_claims_report_query(user, **kwargs):
                     invoiceElemtList[claimServiceElmt.service.packagetype][
                         claimServiceElmt.service.id
                     ]["MontantRecue"] += tarifLocal
+                    amount = tarifLocal
+                invoiceElemtList[claimServiceElmt.service.packagetype][
+                    claimServiceElmt.service.id
+                ]["MontantRecueAudit"] += 0
+                invoiceElemtList[claimServiceElmt.service.packagetype][
+                    claimServiceElmt.service.id
+                ]["MontantRejeteAudit"] += 0
                 if cclaim.audited:
                     # Valeur déja calculé en fonction de si c'est simple ou pas, on
                     # utilise juste la valeur
-                    invoiceElemtList[claimServiceElmt.service.packagetype][
-                        claimServiceElmt.service.id
-                    ]["MontantRecueAudit"] = invoiceElemtList[claimServiceElmt.service.packagetype][
-                        claimServiceElmt.service.id
-                    ]["MontantRecue"]
-                    if cclaim.audit_status == "R" and cclaim.rejection_reason:
-                        invoiceElemtList[claimServiceElmt.service.packagetype][
-                            claimServiceElmt.service.id
-                        ]["MontantRejeteAudit"] = invoiceElemtList[
-                            claimServiceElmt.service.packagetype
-                        ][claimServiceElmt.service.id]["MontantRecue"]
-                    if cclaim.audit_status == "A" and cclaim.audit_explanation:
-                        invoiceElemtList[claimServiceElmt.service.packagetype][
-                            claimServiceElmt.service.id
-                        ]["MontantRetabliAudit"] = invoiceElemtList[
-                            claimServiceElmt.service.packagetype
-                        ][claimServiceElmt.service.id]["MontantRecue"]
+                    # invoiceElemtList[claimServiceElmt.service.packagetype][
+                    #     claimServiceElmt.service.id
+                    # ]["MontantRecueAudit"]=invoiceElemtList[claimServiceElmt.service.packagetype][
+                    #     claimServiceElmt.service.id
+                    # ]["MontantRecue"]
+                    if cclaim.amount_audited:
+                        if cclaim.amount_audited > amount:
+                            retabli = cclaim.amount_audited - amount
+                            invoiceElemtList[claimServiceElmt.service.packagetype][
+                                claimServiceElmt.service.id
+                            ]["MontantRetabliAudit"] += retabli
+                        if cclaim.amount_audited < amount:
+                            rejete = amount - cclaim.amount_audited
+                            invoiceElemtList[claimServiceElmt.service.packagetype][
+                                claimServiceElmt.service.id
+                            ]["MontantRejeteAudit"] += rejete
+                    # if cclaim.audit_status == "R":
+                    #     print("ancien montant R ", amount, " pour le claim ", cclaim.code)
+                    #     print("nouveau montant R ", cclaim.amount_audited)
+                    #     invoiceElemtList[claimServiceElmt.service.packagetype][
+                    #         claimServiceElmt.service.id
+                    #     ]["MontantRejeteAudit"] = invoiceElemtList[
+                    #         claimServiceElmt.service.packagetype
+                    #     ][claimServiceElmt.service.id]["MontantRecue"]
+                    # if cclaim.audit_status == "A":
+                    #     print("ancien montant ", amount, " pour le claim ", cclaim.code)
+                    #     print("nouveau montant ", cclaim.amount_audited)
+                    #     invoiceElemtList[claimServiceElmt.service.packagetype][
+                    #         claimServiceElmt.service.id
+                    #     ]["MontantRetabliAudit"] = invoiceElemtList[
+                    #         claimServiceElmt.service.packagetype
+                    #     ][claimServiceElmt.service.id]["MontantRecue"]
 
                 if claimServiceElmt.service.packagetype not in invoiceElemtTotal:
                     invoiceElemtTotal[claimServiceElmt.service.packagetype] = defaultdict(int)
